@@ -24,3 +24,29 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes popIn {
+  0%   { transform: scaleX(0.08) scaleY(0.04); opacity: 0;   filter: blur(8px); }
+  20%  { transform: scaleX(0.15) scaleY(0.08); opacity: 0.2; filter: blur(6px); }
+  40%  { transform: scaleX(0.35) scaleY(0.25); opacity: 0.5; filter: blur(4px); }
+  60%  { transform: scaleX(0.6)  scaleY(0.55); opacity: 0.7; filter: blur(2px); }
+  80%  { transform: scaleX(0.85) scaleY(0.82); opacity: 0.9; filter: blur(1px); }
+  95%  { transform: scaleX(0.98) scaleY(0.97); opacity: 1;   filter: blur(0px); }
+  100% { transform: scaleX(1)    scaleY(1);    opacity: 1;   filter: blur(0px); }
+}
+
+.pop-in {
+  animation: popIn 0.5s ease-out;
+  transform-origin: center center;
+}
+
+@keyframes ghostIn {
+  0%   { transform: translateY(12px); opacity: 0; filter: blur(3px); }
+  60%  { transform: translateY(2px);  opacity: 0.7; filter: blur(1px); }
+  100% { transform: translateY(0);    opacity: 1;   filter: blur(0px); }
+}
+
+.ghost-in {
+  animation: ghostIn 0.5s ease-out both;
+  opacity: 0;
+}

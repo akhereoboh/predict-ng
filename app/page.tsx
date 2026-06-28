@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const MARKETS = [
   {
@@ -110,6 +111,8 @@ export default function Home() {
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [amount, setAmount] = useState(10);
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
+  const [panelKey, setPanelKey] = useState(0);
+  const router = useRouter();
 
   const filtered =
     activeFilter === "All"
@@ -121,8 +124,6 @@ export default function Home() {
   const fee = (amount * 0.02).toFixed(2);
   const payout = amount / price;
 
-  const [panelKey, setPanelKey] = useState(0);
-
   const toggleBookmark = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setBookmarks((prev) =>
@@ -130,8 +131,7 @@ export default function Home() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+  return (    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* NAV — 3 rows like Polymarket */}
       <nav className="sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
 
@@ -212,7 +212,7 @@ export default function Home() {
           {filtered.map((market, i) => (
             <div
               key={`${activeFilter}-${market.id}`}
-              onClick={() => { setSelectedMarket(market); setPanelKey(k => k + 1); }}
+              onClick={() => router.push(`/market/${market.id}`)}
               style={{ animationDelay: `${i * 0.06}s` }}
               className={`ghost-in bg-white rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
                 selectedMarket.id === market.id

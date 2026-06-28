@@ -237,6 +237,8 @@ export default function MarketPage() {
   const [orderBookOpen, setOrderBookOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [customAmounts, setCustomAmounts] = useState([1, 5, 7, 10, 20]);
 
   const price = side === "YES" ? market.yesPrice : market.noPrice;
   const contracts = (amount / price).toFixed(1);
@@ -244,7 +246,7 @@ export default function MarketPage() {
   const payout = (amount / price).toFixed(2);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-56">
       {/* NAV */}
       <nav className="sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm px-4 h-12 flex items-center justify-between">
         <button
@@ -487,41 +489,119 @@ export default function MarketPage() {
         )}
       </div>
 
-      {/* FIXED BOTTOM BUY BAR */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-20">
-        {/* SUMMARY ROW */}
-        <div className="max-w-2xl mx-auto px-4 pt-2 pb-1 flex justify-between text-xs text-slate-400">
-          <span>{side} price: {price.toFixed(2)}e · Contracts: {contracts} · Fee: e{fee}</span>
-          <span className="text-blue-600 font-medium">Payout: e{payout}</span>
-        </div>
-        {/* AMOUNT + BUTTONS */}
-        <div className="max-w-2xl mx-auto px-4 pb-4 flex gap-2 items-center">
-          <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg px-3 h-11 w-28 shrink-0">
-            <span className="text-sm font-bold text-blue-600">e</span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="bg-transparent text-sm text-slate-800 outline-none w-full text-right"
-            />
+      {/* FIXED BOTTOM */}
+      <div className="fixed bottom-0 left-0 right-0 z-20">
+
+        {/* BUY PANEL */}
+        <div className="bg-white border-t border-slate-200 shadow-lg">
+          <div className="max-w-2xl mx-auto px-4 pt-3 pb-2">
+
+            {/* YES / NO BUTTONS */}
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setSide("YES")}
+                className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                  side === "YES" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                Up {market.yesPrice.toFixed(2)}e
+              </button>
+              <button
+                onClick={() => setSide("NO")}
+                className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                  side === "NO" ? "bg-red-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                Down {market.noPrice.toFixed(2)}e
+              </button>
+            </div>
+
+            {/* CASH + EDIT ROW */}
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-slate-400">E{amount}.00 cash</span>
+              <button
+                onClick={() => setEditing(!editing)}
+                className="text-xs text-blue-600 font-medium cursor-pointer border-none bg-transparent"
+              >
+                {editing ? "Done" : "Edit"}
+              </button>
+            </div>
+
+            {/* EDIT MODE — custom amounts */}
+            {editing && (
+              <div className="flex gap-2 mb-2 items-center">
+                {customAmounts.map((a, i) => (
+                  <input
+                    key={i}
+                    type="number"
+                    value={a}
+                    onChange={(e) => {
+                      const updated = [...customAmounts];
+                      updated[i] = Number(e.target.value);
+                      setCustomAmounts(updated);
+                    }}
+                    className="flex-1 text-center text-sm font-bold bg-slate-100 border border-blue-300 rounded-xl py-2.5 outline-none text-slate-700 w-0"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* QUICK AMOUNTS */}
+            {!editing && (
+            <div className="flex gap-2 mb-2">
+              {customAmounts.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setAmount(a)}
+                  className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
+                    amount === a
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <span className="text-sm font-bold">E{a}</span>
+                  <span className={`text-xs ${amount === a ? "text-blue-200" : "text-emerald-600"}`}>
+                    win E{(a / price).toFixed(2)}
+                  </span>
+                </button>
+              ))}
+            </div>
+            )}
+            
+
+            {/* POTENTIAL WIN — fluctuates */}
+            <div className="text-center py-1">
+              <span className="text-xs text-slate-400">Potential win if {side}: </span>
+              <span className="text-sm font-bold text-emerald-600">E{(amount / price).toFixed(2)}</span>
+              <span className="text-xs text-slate-400"> · Fee: E{(amount * 0.02).toFixed(2)}</span>
+            </div>
+
           </div>
-          <button
-            onClick={() => setSide("YES")}
-            className={`flex-1 h-11 rounded-lg text-sm font-semibold border-none cursor-pointer transition-colors ${
-              side === "YES" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-            }`}
-          >
-            Buy Yes · {market.yesPrice.toFixed(2)}e
-          </button>
-          <button
-            onClick={() => setSide("NO")}
-            className={`flex-1 h-11 rounded-lg text-sm font-semibold border-none cursor-pointer transition-colors ${
-              side === "NO" ? "bg-red-500 text-white" : "bg-red-50 text-red-500 hover:bg-red-100"
-            }`}
-          >
-            Buy No · {market.noPrice.toFixed(2)}e
-          </button>
         </div>
+
+        {/* BOTTOM NAV */}
+        <nav className="bg-white border-t border-slate-100 flex items-center justify-around px-4 py-2">
+          {[
+            { label: "Home", icon: "home" },
+            { label: "Search", icon: "search" },
+            { label: "Breaking", icon: "breaking" },
+            { label: `E${(amount / price).toFixed(0)}`, icon: "portfolio" },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={() => item.icon === "home" && router.push("/")}
+              className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer border-none bg-transparent py-1 px-3"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {item.icon === "home" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
+                {item.icon === "search" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />}
+                {item.icon === "breaking" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />}
+                {item.icon === "portfolio" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />}
+              </svg>
+              <span className="text-xs">{item.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
     </div>
   );

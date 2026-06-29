@@ -272,7 +272,7 @@ export default function Home() {
                     <span className={`text-xs ${t.textMuted}`}>YES</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-base font-bold text-red-500">{market.noPrice.toFixed(2)}e</span>
+                    <span className="text-base font-bold text-[#6B0D0D]">{market.noPrice.toFixed(2)}e</span>
                     <span className={`text-xs ${t.textMuted}`}>NO</span>
                   </div>
                 </div>
@@ -295,7 +295,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                  className="flex-1 text-xs py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer font-medium"
+                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#FDF4F4] text-[#7A1010] hover:bg-[#F9E8E8] transition-colors cursor-pointer font-medium"
                 >
                   Buy NO · {market.noPrice.toFixed(2)}e
                 </button>
@@ -374,7 +374,7 @@ export default function Home() {
             </div>
 
             <button className={`w-full py-2.5 rounded-lg text-sm font-medium text-white border-none cursor-pointer transition-colors ${
-              side === "YES" ? `${t.accent} ${t.accentHover}` : "bg-[#6B0D0D] hover:bg-red-600"
+              side === "YES" ? `${t.accent} ${t.accentHover}` : "bg-[#6B0D0D] hover:bg-[#6B0D0D]"
             }`}>
               Confirm buy {side}
             </button>
@@ -395,12 +395,12 @@ export default function Home() {
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                       pos.side === "YES"
                         ? theme === "dark" ? "bg-yellow-500/10 text-yellow-400" : "bg-blue-50 text-blue-600"
-                        : "bg-red-50 text-red-600"
+                        : "bg-[#FDF4F4] text-[#7A1010]"
                     }`}>
                       {pos.side} · {pos.contracts}
                     </span>
                   </div>
-                  <span className={`text-xs font-semibold ${pos.up ? "text-emerald-500" : "text-red-500"}`}>{pos.pnl}</span>
+                  <span className={`text-xs font-semibold ${pos.up ? "text-emerald-500" : "text-[#6B0D0D]"}`}>{pos.pnl}</span>
                 </div>
               ))}
             </div>

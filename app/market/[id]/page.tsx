@@ -301,7 +301,7 @@ export default function MarketPage() {
             <div className={`text-3xl font-bold ${t.accentText}`}>{market.chance}%</div>
             <div className={`text-xs ${t.textMuted} uppercase tracking-wide`}>Chance</div>
           </div>
-          <div className={`flex items-center gap-1 text-sm font-medium ${market.change >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          <div className={`flex items-center gap-1 text-sm font-medium ${market.change >= 0 ? "text-emerald-500" : "text-[#6B0D0D]"}`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={market.change >= 0 ? "M5 10l7-7m0 0l7 7m-7-7v18" : "M19 14l-7 7m0 0l-7-7m7 7V3"} />
             </svg>
@@ -368,10 +368,10 @@ export default function MarketPage() {
                   ))}
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-red-500 mb-2">NO Bids</p>
+                  <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
                   {[0.67, 0.68, 0.69, 0.70].map((p) => (
                     <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-red-500 font-medium">{p.toFixed(2)}e</span>
+                      <span className="text-[#6B0D0D] font-medium">{p.toFixed(2)}e</span>
                       <span>{Math.floor(Math.random() * 500 + 100)}</span>
                     </div>
                   ))}
@@ -389,7 +389,7 @@ export default function MarketPage() {
             This market will resolve as <span className={`${t.accentText} font-medium`}>Yes</span> if {market.resolveYes}
           </p>
           <p className={`text-sm ${t.textMuted} mb-3`}>
-            It will resolve as <span className="text-red-500 font-medium">No</span> if {market.resolveNo}
+            It will resolve as <span className="text-[#6B0D0D] font-medium">No</span> if {market.resolveNo}
           </p>
           <button className={`text-xs px-3 py-1.5 rounded-full border ${t.border} ${t.textMuted} cursor-pointer bg-transparent transition-colors`}>Show full details</button>
         </div>
@@ -536,7 +536,7 @@ export default function MarketPage() {
                       <span className={`text-sm font-medium ${t.textPrimary}`}>{h.user}</span>
                     </div>
                     <div className="text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${h.side === "YES" ? `${t.accentBg} ${t.accentText}` : "bg-[#6B0D0D]/10 text-red-500"}`}>{h.side} · {h.contracts}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${h.side === "YES" ? `${t.accentBg} ${t.accentText}` : "bg-[#6B0D0D]/10 text-[#6B0D0D]"}`}>{h.side} · {h.contracts}</span>
                       <p className={`text-xs ${t.textMuted} mt-0.5`}>{h.value}</p>
                     </div>
                   </div>
@@ -558,7 +558,7 @@ export default function MarketPage() {
                       <p className={`text-sm font-medium ${t.textPrimary}`}>{pos.label}</p>
                       <p className={`text-xs ${t.textMuted}`}>{pos.contracts} contracts · {pos.value}</p>
                     </div>
-                    <span className={`text-sm font-bold ${pos.up ? "text-emerald-500" : "text-red-500"}`}>{pos.pnl}</span>
+                    <span className={`text-sm font-bold ${pos.up ? "text-emerald-500" : "text-[#6B0D0D]"}`}>{pos.pnl}</span>
                   </div>
                 ))}
               </div>
@@ -580,7 +580,7 @@ export default function MarketPage() {
                       <div className={`w-7 h-7 rounded-full ${t.accentBg} flex items-center justify-center text-xs font-bold ${t.accentText}`}>{act.user[0]}</div>
                       <div>
                         <p className={`text-sm font-medium ${t.textPrimary}`}>{act.user}</p>
-                        <p className={`text-xs ${act.action.includes("YES") ? t.accentText : "text-red-500"}`}>{act.action} · {act.amount}</p>
+                        <p className={`text-xs ${act.action.includes("YES") ? t.accentText : "text-[#6B0D0D]"}`}>{act.action} · {act.amount}</p>
                       </div>
                     </div>
                     <span className={`text-xs ${t.textMuted}`}>{act.time}</span>

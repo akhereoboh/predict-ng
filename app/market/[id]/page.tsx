@@ -315,7 +315,7 @@ export default function MarketPage() {
             <button key={s} onClick={() => setSide(s.toUpperCase() as "YES" | "NO")}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
                 side === s.toUpperCase()
-                  ? s === "Yes" ? `${t.accent} border-transparent text-white` : "bg-red-500 border-transparent text-white"
+                  ? s === "Yes" ? `${t.accent} border-transparent text-white` : "bg-[#6B0D0D] border-transparent text-white"
                   : `${t.navBg} ${t.border} ${t.textMuted}`
               }`}
             >{s}</button>
@@ -536,7 +536,7 @@ export default function MarketPage() {
                       <span className={`text-sm font-medium ${t.textPrimary}`}>{h.user}</span>
                     </div>
                     <div className="text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${h.side === "YES" ? `${t.accentBg} ${t.accentText}` : "bg-red-500/10 text-red-500"}`}>{h.side} · {h.contracts}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${h.side === "YES" ? `${t.accentBg} ${t.accentText}` : "bg-[#6B0D0D]/10 text-red-500"}`}>{h.side} · {h.contracts}</span>
                       <p className={`text-xs ${t.textMuted} mt-0.5`}>{h.value}</p>
                     </div>
                   </div>
@@ -619,7 +619,7 @@ export default function MarketPage() {
               </button>
               <button onClick={() => setSide("NO")}
                 className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                  side === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
+                  side === "NO" ? "bg-[#6B0D0D] text-white" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Down {market.noPrice.toFixed(2)}e

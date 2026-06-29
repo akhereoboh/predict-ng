@@ -322,7 +322,7 @@ export default function Home() {
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  side === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
+                  side === "NO" ? "bg-[#6B0D0D] text-white" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Buy NO
@@ -374,7 +374,7 @@ export default function Home() {
             </div>
 
             <button className={`w-full py-2.5 rounded-lg text-sm font-medium text-white border-none cursor-pointer transition-colors ${
-              side === "YES" ? `${t.accent} ${t.accentHover}` : "bg-red-500 hover:bg-red-600"
+              side === "YES" ? `${t.accent} ${t.accentHover}` : "bg-[#6B0D0D] hover:bg-red-600"
             }`}>
               Confirm buy {side}
             </button>

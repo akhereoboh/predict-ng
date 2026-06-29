@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+
 import { useRouter } from "next/navigation";
 import { useTheme } from "./context/theme";
+import { useState, useRef } from "react";
+
 
 const MARKETS = [
   {
@@ -107,7 +109,28 @@ export default function Home() {
   const [amount, setAmount] = useState(10);
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
   const [panelKey, setPanelKey] = useState(0);
+  const [panelVisible, setPanelVisible] = useState(true);
   const router = useRouter();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const cardRef = (el: HTMLDivElement | null, market: typeof MARKETS[0]) => {
+    if (!el) return;
+    observerRef.current?.disconnect();
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setPanelVisible(false);
+          setTimeout(() => {
+            setSelectedMarket(market);
+            setPanelKey((k) => k + 1);
+            setPanelVisible(true);
+          }, 180);
+        }
+      },
+      { threshold: 0.6 }
+    );
+    observerRef.current.observe(el);
+  };
 
   const filtered =
     activeFilter === "All"
@@ -234,6 +257,7 @@ export default function Home() {
           {filtered.map((market, i) => (
             <div
               key={`${activeFilter}-${market.id}`}
+              ref={(el) => cardRef(el, market)}
               onClick={() => router.push(`/market/${market.id}`)}
               style={{ animationDelay: `${i * 0.06}s` }}
               className={`ghost-in ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
@@ -276,7 +300,7 @@ export default function Home() {
                     <span className={`text-xs ${t.textMuted}`}>NO</span>
                   </div>
                 </div>
-                <div className="flex-1 h-1.5 rounded-full bg-red-300 overflow-hidden">
+                <div className="flex-1 h-1.5 rounded-full bg-[#A52020] overflow-hidden">
                   <div className={`h-full rounded-full ${t.accent}`} style={{ width: `${market.yesPrice * 100}%` }} />
                 </div>
               </div>
@@ -306,7 +330,7 @@ export default function Home() {
 
         {/* RIGHT — TRADE PANEL */}
         <div className="flex flex-col gap-4 sticky top-32 self-start">
-          <div key={panelKey} className={`pop-in ${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
+          <div key={panelKey} className={`pop-in ${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm transition-opacity duration-200 ${panelVisible ? "opacity-100" : "opacity-0"}`}>
             <p className={`text-xs ${t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
             <p className={`text-xs ${t.textMuted} mb-3`}>{selectedMarket.closes}</p>
 

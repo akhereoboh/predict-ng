@@ -118,32 +118,29 @@ export default function Home() {
   const cardRef = (el: HTMLDivElement | null, market: typeof MARKETS[0]) => {
     if (!el) return;
     cardRefs.current.set(market.id, market);
-    cardEls.current.push(el);
 
-    if (observerRef.current) observerRef.current.disconnect();
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) {
-          const id = (visible.target as HTMLDivElement).dataset.marketId;
-          const m = id ? cardRefs.current.get(id) : null;
-          if (m) {
-            setPanelVisible(false);
-            setTimeout(() => {
-              setSelectedMarket(m);
-              setPanelKey((k) => k + 1);
-              setPanelVisible(true);
-            }, 80);
-          }
-        }
-      },
-      { threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: "0px 0px 0px 0px" }
-    );
-
-    cardEls.current.forEach((c) => observerRef.current!.observe(c));
+    if (!observerRef.current) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const id = (entry.target as HTMLDivElement).dataset.marketId;
+              const m = id ? cardRefs.current.get(id) : null;
+              if (m) {
+                setPanelVisible(false);
+                setTimeout(() => {
+                  setSelectedMarket(m);
+                  setPanelKey((k) => k + 1);
+                  setPanelVisible(true);
+                }, 100);
+              }
+            }
+          });
+        },
+        { threshold: 0.3, rootMargin: "0px 0px -10% 0px" }
+      );
+    }
+    observerRef.current.observe(el);
   };
 
   const filtered =

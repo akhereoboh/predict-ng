@@ -321,17 +321,17 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
-                  className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                  className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors hover:bg-yellow-500 hover:border-yellow-500 hover:text-zinc-900 ${
                     theme === "dark"
-                      ? "border-yellow-700 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
-                      : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      ? "border-yellow-700 bg-yellow-500/10 text-yellow-400"
+                      : "border-blue-200 bg-blue-50 text-blue-700"
                   }`}
                 >
                   Buy YES · {market.yesPrice.toFixed(2)}e
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#FDF4F4] text-[#7A1010] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D] transition-colors cursor-pointer font-medium"
+                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#F9E8E8] text-[#7A1010] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D] transition-colors cursor-pointer font-medium"
                 >
                   Buy NO · {market.noPrice.toFixed(2)}e
                 </button>
@@ -431,7 +431,7 @@ export default function Home() {
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                       pos.side === "YES"
                         ? theme === "dark" ? "bg-yellow-500/10 text-yellow-400" : "bg-blue-50 text-blue-600"
-                        : "bg-[#FDF4F4] text-[#7A1010]"
+                        : "bg-[#F9E8E8] text-[#7A1010]"
                     }`}>
                       {pos.side} · {pos.contracts}
                     </span>

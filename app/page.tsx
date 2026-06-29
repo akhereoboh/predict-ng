@@ -112,23 +112,33 @@ export default function Home() {
   const [panelVisible, setPanelVisible] = useState(true);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
 
   const cardRef = (el: HTMLDivElement | null, market: typeof MARKETS[0]) => {
     if (!el) return;
-    observerRef.current?.disconnect();
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPanelVisible(false);
-          setTimeout(() => {
-            setSelectedMarket(market);
-            setPanelKey((k) => k + 1);
-            setPanelVisible(true);
-          }, 180);
-        }
-      },
-      { threshold: 0.6 }
-    );
+    cardRefs.current.set(market.id, market);
+
+    if (!observerRef.current) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const id = (entry.target as HTMLDivElement).dataset.marketId;
+              const m = id ? cardRefs.current.get(id) : null;
+              if (m) {
+                setPanelVisible(false);
+                setTimeout(() => {
+                  setSelectedMarket(m);
+                  setPanelKey((k) => k + 1);
+                  setPanelVisible(true);
+                }, 180);
+              }
+            }
+          });
+        },
+        { threshold: 0.5, rootMargin: "-20% 0px -20% 0px" }
+      );
+    }
     observerRef.current.observe(el);
   };
 
@@ -258,6 +268,7 @@ export default function Home() {
             <div
               key={`${activeFilter}-${market.id}`}
               ref={(el) => cardRef(el, market)}
+              data-market-id={market.id}
               onClick={() => router.push(`/market/${market.id}`)}
               style={{ animationDelay: `${i * 0.06}s` }}
               className={`ghost-in ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${

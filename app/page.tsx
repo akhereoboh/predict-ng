@@ -331,7 +331,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#F9E8E8] text-[#7A1010] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D] transition-colors cursor-pointer font-medium"
+                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#974949] text-[#7A1010] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D] transition-colors cursor-pointer font-medium"
                 >
                   Buy NO · {market.noPrice.toFixed(2)}e
                 </button>

@@ -131,12 +131,12 @@ export default function Home() {
                   setSelectedMarket(m);
                   setPanelKey((k) => k + 1);
                   setPanelVisible(true);
-                }, 180);
+                }, 100);
               }
             }
           });
         },
-        { threshold: 0.5, rootMargin: "-20% 0px -20% 0px" }
+        { threshold: 0.3, rootMargin: "0px 0px -10% 0px" }
       );
     }
     observerRef.current.observe(el);
@@ -330,7 +330,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#FDF4F4] text-[#7A1010] hover:bg-[#F9E8E8] transition-colors cursor-pointer font-medium"
+                  className="flex-1 text-xs py-1.5 rounded-lg border border-[#A52020] bg-[#FDF4F4] text-[#7A1010] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D] transition-colors cursor-pointer font-medium"
                 >
                   Buy NO · {market.noPrice.toFixed(2)}e
                 </button>

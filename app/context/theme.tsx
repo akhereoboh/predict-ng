@@ -51,9 +51,9 @@ interface ThemeContextType {
 }
 
 const LIGHT = {
-  pageBg: "bg-slate-50",
+  pageBg: "bg-[#F5F4EF]",
   navBg: "bg-white",
-  cardBg: "bg-white",
+  cardBg: "bg-[#FDFCF9]",
   inputBg: "bg-slate-100",
   summaryBg: "bg-slate-50",
   border: "border-slate-200",

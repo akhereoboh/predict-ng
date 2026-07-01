@@ -110,6 +110,7 @@ export default function Home() {
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
   const [panelKey, setPanelKey] = useState(0);
   const [panelVisible, setPanelVisible] = useState(true);
+  const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
@@ -148,7 +149,8 @@ export default function Home() {
       ? MARKETS
       : MARKETS.filter((m) => m.category === activeFilter);
 
-  const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
+  const activeSide = hoverSide ?? side;
+const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
   const contracts = (amount / price).toFixed(1);
   const fee = (amount * 0.02).toFixed(2);
   const payout = amount / price;
@@ -321,21 +323,25 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
-                  className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                    theme === "dark"
-                      ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
-                      : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                  }`}
+                    onMouseEnter={() => setHoverSide("YES")}
+                    onMouseLeave={() => setHoverSide(null)}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                      theme === "dark"
+                        ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
+                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    }`}
                 >
                   Buy YES · {market.yesPrice.toFixed(2)}e
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                  className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                    theme === "dark"
-                      ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                      : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
-                  }`}
+                    onMouseEnter={() => setHoverSide("NO")}
+                    onMouseLeave={() => setHoverSide(null)}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                      theme === "dark"
+                        ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                        : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
+                    }`}
                 >
                   Buy NO · {market.noPrice.toFixed(2)}e
                 </button>
@@ -346,7 +352,11 @@ export default function Home() {
 
         {/* RIGHT — TRADE PANEL */}
         <div className="hidden md:flex flex-col gap-4 sticky top-32 self-start">
-          <div key={panelKey} className={`pop-in ${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm transition-opacity duration-200 ${panelVisible ? "opacity-100" : "opacity-0"}`}>
+          <div key={panelKey} className={`pop-in ${t.cardBg} rounded-xl p-4 shadow-sm transition-all duration-200 border ${
+              theme === "dark"
+                ? activeSide === "YES" ? "border-green-500/60" : activeSide === "NO" ? "border-red-500/60" : t.border
+                : t.border
+            } ${panelVisible ? "opacity-100" : "opacity-0"}`}>
             <p className={`text-xs ${t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
             <p className={`text-xs ${t.textMuted} mb-3`}>{selectedMarket.closes}</p>
 
@@ -354,7 +364,7 @@ export default function Home() {
               <button
                 onClick={() => setSide("YES")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  side === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
+                  activeSide === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Buy YES
@@ -362,7 +372,7 @@ export default function Home() {
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  side === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
+                  activeSide === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Buy NO
@@ -414,7 +424,7 @@ export default function Home() {
             </div>
 
             <button className={`w-full py-2.5 rounded-lg text-sm font-medium text-white border-none cursor-pointer transition-colors ${
-              side === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
+              activeSide === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
             }`}>
               Confirm buy {side}
             </button>

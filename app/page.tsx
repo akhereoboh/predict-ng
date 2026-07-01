@@ -354,7 +354,7 @@ export default function Home() {
               <button
                 onClick={() => setSide("YES")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  side === "YES" ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
+                  side === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Buy YES
@@ -362,7 +362,7 @@ export default function Home() {
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  side === "NO" ? "bg-[#6B0D0D] text-white" : `${t.inputBg} ${t.textMuted}`
+                  side === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
                 Buy NO
@@ -414,7 +414,7 @@ export default function Home() {
             </div>
 
             <button className={`w-full py-2.5 rounded-lg text-sm font-medium text-white border-none cursor-pointer transition-colors ${
-              side === "YES" ? `${t.accent} ${t.accentHover}` : "bg-[#6B0D0D] hover:bg-[#6B0D0D]"
+              side === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
             }`}>
               Confirm buy {side}
             </button>
@@ -434,8 +434,8 @@ export default function Home() {
                     <p className={`text-xs font-medium ${t.textPrimary} leading-snug`}>{pos.label}</p>
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                       pos.side === "YES"
-                        ? theme === "dark" ? "bg-yellow-500/10 text-yellow-400" : "bg-blue-50 text-blue-600"
-                        : "bg-[#F9E8E8] text-[#7A1010]"
+                      ? theme === "dark" ? "bg-green-500/15 text-green-400" : "bg-blue-50 text-blue-600"
+                      : theme === "dark" ? "bg-red-500/15 text-red-400" : "bg-[#FDF4F4] text-[#7A1010]"
                     }`}>
                       {pos.side} · {pos.contracts}
                     </span>

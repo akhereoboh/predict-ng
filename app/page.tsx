@@ -323,7 +323,7 @@ export default function Home() {
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
                   className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
                     theme === "dark"
-                      ? "border-green-500/50 bg-transparent text-green-400 hover:bg-green-500 hover:text-black hover:border-green-500"
+                      ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
                       : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                   }`}
                 >
@@ -333,7 +333,7 @@ export default function Home() {
                   onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
                   className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
                     theme === "dark"
-                      ? "border-yellow-500/50 bg-transparent text-yellow-400 hover:bg-yellow-500 hover:text-black hover:border-yellow-500"
+                      ? "border-white/40 bg-black text-white hover:bg-yellow-500 hover:text-black hover:border-yellow-500"
                       : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                   }`}
                 >

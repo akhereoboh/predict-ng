@@ -179,7 +179,7 @@ export default function Home() {
       <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm`}>
 
         {/* ROW 1 */}
-        <div className="flex items-center justify-between px-6 h-12">
+        <div className="flex items-center justify-between px-3 md:px-6 h-12">
           <div className="flex items-center gap-1.5">
             <span className={`w-6 h-6 rounded-md ${t.accent} flex items-center justify-center text-white text-xs font-black italic`}>E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
@@ -218,7 +218,7 @@ export default function Home() {
         </div>
 
         {/* ROW 2: filters */}
-        <div className={`flex items-center gap-1 px-6 py-1.5 border-t ${t.borderLight} overflow-x-auto`}>
+        <div className={`flex items-center gap-1 px-3 md:px-6 py-1.5 border-t ${t.borderLight} overflow-x-auto`}>
           <div className={`flex items-center gap-1 text-xs ${t.textMuted} mr-2 shrink-0`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -241,7 +241,7 @@ export default function Home() {
         </div>
 
         {/* ROW 3: search */}
-        <div className={`px-6 py-2 border-t ${t.borderLight} flex items-center gap-2`}>
+        <div className={`px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-6 py-2 border-t ${t.borderLight} flex items-center gap-2`}>
           <button className={`p-1.5 rounded-md ${t.textMuted} transition-colors cursor-pointer border-none bg-transparent shrink-0`}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -262,9 +262,9 @@ export default function Home() {
       </nav>
 
       {/* BODY */}
-      <div className="max-w-5xl mx-auto px-6 py-5 grid grid-cols-[1fr_300px] gap-5 pb-20">
+      <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 pb-20">
         {/* LEFT */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full">
           {filtered.map((market, i) => (
             <div
               key={`${activeFilter}-${market.id}`}
@@ -312,7 +312,7 @@ export default function Home() {
                     <span className={`text-xs ${t.textMuted}`}>NO</span>
                   </div>
                 </div>
-                <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
+                <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
                   <div className={`h-full rounded-full ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${market.yesPrice * 100}%` }} />
                 </div>
               </div>
@@ -345,7 +345,7 @@ export default function Home() {
         </div>
 
         {/* RIGHT — TRADE PANEL */}
-        <div className="flex flex-col gap-4 sticky top-32 self-start">
+        <div className="hidden md:flex flex-col gap-4 sticky top-32 self-start">
           <div key={panelKey} className={`pop-in ${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm transition-opacity duration-200 ${panelVisible ? "opacity-100" : "opacity-0"}`}>
             <p className={`text-xs ${t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
             <p className={`text-xs ${t.textMuted} mb-3`}>{selectedMarket.closes}</p>

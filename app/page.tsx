@@ -306,7 +306,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <span className={`text-base font-bold ${t.accentText}`}>{market.yesPrice.toFixed(2)}e</span>
+                    <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{market.yesPrice.toFixed(2)}e</span>
                     <span className={`text-xs ${t.textMuted}`}>YES</span>
                   </div>
                   <div className="flex flex-col items-center">

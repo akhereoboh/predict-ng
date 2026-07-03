@@ -7,6 +7,8 @@ type Theme = "light" | "dark";
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  isLoggedIn: boolean;
+  setIsLoggedIn: (v: boolean) => void;
   t: {
     // backgrounds
     pageBg: string;
@@ -118,13 +120,14 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
 
   const t = theme === "light" ? LIGHT : DARK;
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, t }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, isLoggedIn, setIsLoggedIn, t }}>
       {children}
     </ThemeContext.Provider>
   );

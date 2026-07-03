@@ -628,7 +628,7 @@ export default function MarketPage() {
 
             {/* CASH + EDIT */}
             <div className="flex justify-between items-center mb-2">
-              <span className={`text-xs ${t.textMuted}`}>E{amount}.00 cash</span>
+              <span className={`text-xs ${t.textMuted}`}>${amount}.00 cash</span>
               <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
                 {editing ? "Done" : "Edit"}
               </button>
@@ -661,9 +661,9 @@ export default function MarketPage() {
                         : `${t.inputBg} ${t.textPrimary}`
                     }`}
                   >
-                    <span className="text-sm font-bold">E{a}</span>
+                    <span className={`text-sm font-bold`}>${a}</span>
                     <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-emerald-500"}`}>
-                      win E{(a / price).toFixed(2)}
+                      win ${(a / price).toFixed(0)}¢
                     </span>
                   </button>
                 ))}
@@ -673,7 +673,7 @@ export default function MarketPage() {
             {/* POTENTIAL WIN */}
             <div className="text-center py-1">
               <span className={`text-xs ${t.textMuted}`}>Potential win if {side}: </span>
-              <span className={`text-sm font-bold ${t.accentText}`}>E{payout}</span>
+              <span className={`text-sm font-bold ${t.accentText}`}>${payout}</span>
               <span className={`text-xs ${t.textMuted}`}> · Fee: E{fee}</span>
             </div>
           </div>

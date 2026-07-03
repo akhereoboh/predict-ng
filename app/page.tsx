@@ -240,14 +240,14 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             <div className="flex items-center gap-4 text-xs">
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
-                <span className="font-bold text-emerald-500 text-sm">e83.20</span>
+                <span className="font-bold text-emerald-500 text-sm">$83.20</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
-                <span className="font-bold text-emerald-500 text-sm">e12.45</span>
+                <span className="font-bold text-emerald-500 text-sm">$12.45</span>
               </div>
             </div>
-            <button className={`text-sm px-4 py-1.5 rounded-md ${t.accent} ${t.accentHover} text-white font-semibold transition-colors cursor-pointer border-none`}>
+            <button className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
               Deposit
             </button>
             {/* THEME TOGGLE */}
@@ -405,11 +405,11 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{market.yesPrice.toFixed(2)}e</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(market.yesPrice * 100)}¢</span>
                         <span className={`text-xs ${t.textMuted}`}>YES</span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{market.noPrice.toFixed(2)}e</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(market.noPrice * 100)}¢</span>
                         <span className={`text-xs ${t.textMuted}`}>NO</span>
                       </div>
                     </div>
@@ -428,7 +428,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                       }`}
                     >
-                      Buy YES · {market.yesPrice.toFixed(2)}e
+                      Buy YES · {Math.round(market.yesPrice * 100)}¢
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
@@ -440,7 +440,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                       }`}
                     >
-                      Buy NO · {market.noPrice.toFixed(2)}e
+                      Buy NO · {Math.round(market.noPrice * 100)}¢
                     </button>
                   </div>
                 </>
@@ -463,7 +463,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("YES")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "YES" ? "bg-green-500 text-black" : "bg-black text-white border border-white/40 hover:bg-green-500 hover:text-black hover:border-green-500"
+                  activeSide === "YES" ? "bg-green-500 text-black" : "bg-[#2A2A2A] text-white border border-white/20 hover:bg-green-500 hover:text-black hover:border-green-500"
                 }`}
               >
                 Buy YES
@@ -471,7 +471,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "NO" ? "bg-red-500 text-white" : "bg-black text-white border border-white/40 hover:bg-red-500 hover:text-white hover:border-red-500"
+                  activeSide === "NO" ? "bg-red-500 text-white" : "bg-[#2A2A2A] text-white border border-white/20 hover:bg-red-500 hover:text-white hover:border-red-500"
                 }`}
               >
                 Buy NO
@@ -480,7 +480,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
             <p className={`text-xs ${t.textMuted} mb-1.5`}>Amount</p>
             <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-2`}>
-              <span className={`text-sm font-bold ${t.accentText} shrink-0`}>e</span>
+              <span className={`text-sm font-bold ${t.accentText} shrink-0`}>$</span>
               <input
                 type="number"
                 value={amount}
@@ -503,10 +503,10 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           ? "bg-red-500 border-red-500 text-white font-medium"
                           : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
                         : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
-                      : `${t.border} ${t.inputBg} ${t.textMuted}`
+                      : `border border-white/20 bg-[#2A2A2A] text-white`
                   }`}
                 >
-                  e{a}
+                  ${a}
                 </button>
               ))}
             </div>

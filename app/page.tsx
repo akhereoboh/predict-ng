@@ -97,6 +97,40 @@ const MARKETS = [
     traders: 88,
     closes: "Dec 31, 2026",
   },
+  {
+    id: "10",
+    question: "Who will be Nigeria's top scorer at AFCON 2026?",
+    category: "Sports",
+    yesPrice: 0,
+    noPrice: 0,
+    volume: "52,000",
+    traders: 410,
+    closes: "Feb 1, 2027",
+    multiOption: true,
+    options: [
+      { name: "Victor Osimhen", yesPrice: 0.45, noPrice: 0.55 },
+      { name: "Kelechi Iheanacho", yesPrice: 0.22, noPrice: 0.78 },
+      { name: "Taiwo Awoniyi", yesPrice: 0.18, noPrice: 0.82 },
+      { name: "Samuel Chukwueze", yesPrice: 0.15, noPrice: 0.85 },
+    ],
+  },
+  {
+    id: "11",
+    question: "Who will win the 2027 Nigerian Presidential Election?",
+    category: "Politics",
+    yesPrice: 0,
+    noPrice: 0,
+    volume: "134,000",
+    traders: 892,
+    closes: "Feb 28, 2027",
+    multiOption: true,
+    options: [
+      { name: "Peter Obi", yesPrice: 0.71, noPrice: 0.29 },
+      { name: "Bola Tinubu", yesPrice: 0.48, noPrice: 0.52 },
+      { name: "Atiku Abubakar", yesPrice: 0.31, noPrice: 0.69 },
+      { name: "Rabiu Kwankwaso", yesPrice: 0.12, noPrice: 0.88 },
+    ],
+  },
 ];
 
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks"];
@@ -331,50 +365,86 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </div>
               </div>
 
-              {/* PROBABILITY BAR */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{market.yesPrice.toFixed(2)}e</span>
-                    <span className={`text-xs ${t.textMuted}`}>YES</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{market.noPrice.toFixed(2)}e</span>
-                    <span className={`text-xs ${t.textMuted}`}>NO</span>
-                  </div>
+              {/* PROBABILITY BAR OR MULTI-OPTION */}
+              {(market as any).multiOption ? (
+                <div className="flex flex-col gap-2 mt-1">
+                  {(market as any).options.map((opt: any) => (
+                    <div key={opt.name} className="flex items-center justify-between gap-3">
+                      <span className={`text-xs font-medium ${t.textSecondary} w-36 shrink-0`}>{opt.name}</span>
+                      <div className="flex gap-2 ml-auto">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                          onMouseEnter={() => setHoverSide("YES")}
+                          onMouseLeave={() => setHoverSide(null)}
+                          className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "border-white/40 bg-black text-green-400 hover:bg-green-500 hover:text-black hover:border-green-500"
+                              : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          }`}
+                        >
+                          Yes {(opt.yesPrice * 100).toFixed(0)}¢
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                          onMouseEnter={() => setHoverSide("NO")}
+                          onMouseLeave={() => setHoverSide(null)}
+                          className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "border-white/40 bg-black text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500"
+                              : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
+                          }`}
+                        >
+                          No {(opt.noPrice * 100).toFixed(0)}¢
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
-                  <div className={`h-full rounded-full ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${market.yesPrice * 100}%` }} />
-                </div>
-              </div>
-
-              {/* BUY BUTTONS */}
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
-                    onMouseEnter={() => setHoverSide("YES")}
-                    onMouseLeave={() => setHoverSide(null)}
-                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                      theme === "dark"
-                        ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
-                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    }`}
-                >
-                  Buy YES · {market.yesPrice.toFixed(2)}e
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
-                    onMouseEnter={() => setHoverSide("NO")}
-                    onMouseLeave={() => setHoverSide(null)}
-                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                      theme === "dark"
-                        ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                        : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
-                    }`}
-                >
-                  Buy NO · {market.noPrice.toFixed(2)}e
-                </button>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{market.yesPrice.toFixed(2)}e</span>
+                        <span className={`text-xs ${t.textMuted}`}>YES</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{market.noPrice.toFixed(2)}e</span>
+                        <span className={`text-xs ${t.textMuted}`}>NO</span>
+                      </div>
+                    </div>
+                    <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
+                      <div className={`h-full rounded-full ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${market.yesPrice * 100}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                      onMouseEnter={() => setHoverSide("YES")}
+                      onMouseLeave={() => setHoverSide(null)}
+                      className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                        theme === "dark"
+                          ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
+                          : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      }`}
+                    >
+                      Buy YES · {market.yesPrice.toFixed(2)}e
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                      onMouseEnter={() => setHoverSide("NO")}
+                      onMouseLeave={() => setHoverSide(null)}
+                      className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                        theme === "dark"
+                          ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                          : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
+                      }`}
+                    >
+                      Buy NO · {market.noPrice.toFixed(2)}e
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

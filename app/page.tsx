@@ -364,7 +364,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("YES")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
+                  activeSide === "YES" ? "bg-green-500 text-black" : "bg-black text-white border border-white/40 hover:bg-green-500 hover:text-black hover:border-green-500"
                 }`}
               >
                 Buy YES
@@ -372,7 +372,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
+                  activeSide === "NO" ? "bg-red-500 text-white" : "bg-black text-white border border-white/40 hover:bg-red-500 hover:text-white hover:border-red-500"
                 }`}
               >
                 Buy NO

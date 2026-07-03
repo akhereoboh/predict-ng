@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTheme } from "./context/theme";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 
 const MARKETS = [
@@ -111,11 +111,27 @@ export default function Home() {
   const [panelKey, setPanelKey] = useState(0);
   const [panelVisible, setPanelVisible] = useState(true);
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
+  const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
   const cardEls = useRef<HTMLDivElement[]>([]);
 
+
+
+  useEffect(() => {
+    if (theme !== "dark") return;
+    const interval = setInterval(() => {
+      const market = MARKETS[Math.floor(Math.random() * MARKETS.length)];
+      const side = Math.random() > 0.5 ? "YES" : "NO";
+      const amount = [1, 2, 3, 5, 8, 10][Math.floor(Math.random() * 6)];
+      const x = 20 + Math.random() * 60;
+      const id = Date.now() + Math.random();
+      setBubbles((prev) => [...prev, { id, marketId: market.id, side, amount, x }]);
+      setTimeout(() => setBubbles((prev) => prev.filter((b) => b.id !== id)), 1900);
+    }, 900);
+    return () => clearInterval(interval);
+  }, [theme]);
   const cardRef = (el: HTMLDivElement | null, market: typeof MARKETS[0]) => {
     if (!el) return;
     cardRefs.current.set(market.id, market);
@@ -274,12 +290,25 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               data-market-id={market.id}
               onClick={() => router.push(`/market/${market.id}`)}
               style={{ animationDelay: `${i * 0.06}s` }}
-              className={`ghost-in ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
+              className={`relative overflow-hidden ghost-in ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
                 selectedMarket.id === market.id
                   ? `${theme === "dark" ? "border-yellow-500 shadow-yellow-900/20" : "border-blue-500 shadow-blue-100"} shadow-md`
                   : `${t.border} hover:shadow-md`
               }`}
             >
+              {bubbles.filter((b) => b.marketId === market.id).map((b) => (
+                <span
+                  key={b.id}
+                  className="float-up"
+                  style={{
+                    left: `${b.x}%`,
+                    bottom: "60px",
+                    color: b.side === "YES" ? "#4ade80" : "#ef4444",
+                  }}
+                >
+                  {b.side} +e{b.amount}
+                </span>
+              ))}
               <div className="flex justify-between items-start gap-3 mb-3">
                 <div className="flex-1">
                   <p className={`text-sm font-medium leading-snug ${t.textPrimary}`}>{market.question}</p>
@@ -310,7 +339,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                     <span className={`text-xs ${t.textMuted}`}>YES</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-base font-bold text-[#6B0D0D]">{market.noPrice.toFixed(2)}e</span>
+                    <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{market.noPrice.toFixed(2)}e</span>
                     <span className={`text-xs ${t.textMuted}`}>NO</span>
                   </div>
                 </div>

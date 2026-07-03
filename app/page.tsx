@@ -233,7 +233,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
         {/* ROW 1 */}
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
           <div className="flex items-center gap-1.5">
-            <span className={`w-6 h-6 rounded-md ${t.accent} flex items-center justify-center text-white text-xs font-black italic`}>E</span>
+            <span className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center text-white text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
           <div className="flex items-center gap-4">
@@ -463,7 +463,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("YES")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "YES" ? "bg-green-500 text-black" : "bg-[#2A2A2A] text-white border border-white/20 hover:bg-green-500 hover:text-black hover:border-green-500"
+                  activeSide === "YES" ? "bg-green-500 text-black" : "bg-[#141414] text-white border border-white/20 hover:bg-green-500 hover:text-black hover:border-green-500"
                 }`}
               >
                 Buy YES
@@ -471,7 +471,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <button
                 onClick={() => setSide("NO")}
                 className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                  activeSide === "NO" ? "bg-red-500 text-white" : "bg-[#2A2A2A] text-white border border-white/20 hover:bg-red-500 hover:text-white hover:border-red-500"
+                  activeSide === "NO" ? "bg-red-500 text-white" : "bg-[#141414] text-white border border-white/20 hover:bg-red-500 hover:text-white hover:border-red-500"
                 }`}
               >
                 Buy NO
@@ -503,7 +503,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           ? "bg-red-500 border-red-500 text-white font-medium"
                           : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
                         : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
-                      : `border border-white/20 bg-[#2A2A2A] text-white`
+                      : `border border-white/20 bg-[#141414] text-white`
                   }`}
                 >
                   ${a}
@@ -540,9 +540,9 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             <p className={`text-xs font-medium ${t.textMuted} uppercase tracking-widest mb-3`}>Your positions</p>
             <div className="flex flex-col gap-2">
               {[
-                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+e0.84", up: true },
-                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+e0.32", up: true },
-                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−e1.20", up: false },
+                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+84¢", up: true },
+                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+32¢", up: true },
+                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−120¢", up: false },
               ].map((pos) => (
                 <div key={pos.label} className={`flex items-center justify-between py-1.5 border-b ${t.borderLight} last:border-0`}>
                   <div>
@@ -555,7 +555,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                       {pos.side} · {pos.contracts}
                     </span>
                   </div>
-                  <span className={`text-xs font-semibold ${pos.up ? "text-emerald-500" : "text-[#6B0D0D]"}`}>{pos.pnl}</span>
+                  <span className={`text-xs font-semibold ${pos.up ? "text-emerald-500" : "text-red-500"}`}>{pos.pnl}</span>
                 </div>
               ))}
             </div>

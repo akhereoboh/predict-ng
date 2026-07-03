@@ -397,7 +397,13 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                   onClick={() => setAmount(a)}
                   className={`text-xs py-1.5 rounded-lg border cursor-pointer transition-colors ${
                     amount === a
-                      ? `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
+                      ? theme === "dark"
+                        ? activeSide === "YES"
+                          ? "bg-green-500 border-green-500 text-black font-medium"
+                          : activeSide === "NO"
+                          ? "bg-red-500 border-red-500 text-white font-medium"
+                          : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
+                        : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
                       : `${t.border} ${t.inputBg} ${t.textMuted}`
                   }`}
                 >

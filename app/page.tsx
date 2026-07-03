@@ -252,8 +252,10 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 <span className="font-bold text-emerald-500 text-sm">$12.45</span>
               </div>
             </div>
-            <button className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
-              Deposit
+            <button
+              onClick={() => { if (!isLoggedIn) setShowAuthModal(true); }}
+              className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
+              {isLoggedIn ? "Deposit" : "Sign in"}
             </button>
             {/* THEME TOGGLE */}
             <button
@@ -539,7 +541,13 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             <button
               onClick={() => { if (!isLoggedIn) setShowAuthModal(true); }}
               className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors ${
-                side === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
+                theme === "dark"
+                  ? activeSide === "YES"
+                    ? "bg-green-500 hover:bg-green-400 text-black"
+                    : activeSide === "NO"
+                    ? "bg-red-500 hover:bg-red-400 text-white"
+                    : side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                  : side === "YES" ? `${t.accent} ${t.accentHover} text-white` : "bg-[#6B0D0D] text-white"
               }`}>
               {isLoggedIn ? `Confirm buy ${side}` : `Sign in to trade`}
             </button>

@@ -145,6 +145,8 @@ export default function Home() {
   const [panelKey, setPanelKey] = useState(0);
   const [panelVisible, setPanelVisible] = useState(true);
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
+const [showAuthModal, setShowAuthModal] = useState(false);
+const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -233,7 +235,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
         {/* ROW 1 */}
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
           <div className="flex items-center gap-1.5">
-            <span className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center text-white text-xs font-black italic">E</span>
+            <span className="w-6 h-6 rounded-md bg-yellow-500 flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
           <div className="flex items-center gap-4">
@@ -271,12 +273,17 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
         {/* ROW 2: filters */}
         <div className={`flex items-center gap-1 px-3 md:px-6 py-1.5 border-t ${t.borderLight} overflow-x-auto`}>
-          <div className={`flex items-center gap-1 text-xs ${t.textMuted} mr-2 shrink-0`}>
+          <button
+            onClick={() => setActiveFilter("All")}
+            className={`flex items-center gap-1 text-xs mr-2 shrink-0 cursor-pointer border-none bg-transparent transition-colors ${
+              activeFilter === "All" ? "text-yellow-400 font-semibold" : t.textMuted
+            }`}
+          >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
             <span className="font-medium">Trending</span>
-          </div>
+          </button>
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -480,7 +487,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
             <p className={`text-xs ${theme === "dark" ? "text-white/80" : t.textMuted} mb-1.5`}>Amount</p>
             <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-2`}>
-              <span className={`text-sm font-bold ${t.accentText} shrink-0`}>$</span>
+              <span className="text-sm font-bold text-green-400 shrink-0">$</span>
               <input
                 type="number"
                 value={amount}
@@ -528,10 +535,12 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               </div>
             </div>
 
-            <button className={`w-full py-2.5 rounded-lg text-sm font-medium text-white border-none cursor-pointer transition-colors ${
-              activeSide === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
-            }`}>
-              Confirm buy {side}
+            <button
+              onClick={() => { if (!isLoggedIn) setShowAuthModal(true); }}
+              className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors ${
+                side === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
+              }`}>
+              {isLoggedIn ? `Confirm buy ${side}` : `Sign in to trade`}
             </button>
           </div>
 
@@ -582,6 +591,52 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           </button>
         ))}
       </nav>
+    {/* AUTH MODAL */}
+      {showAuthModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowAuthModal(false)}
+        >
+          <div
+            className={`${t.cardBg} border ${t.border} rounded-2xl p-6 w-80 shadow-2xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Logo */}
+            <div className="flex items-center gap-2 mb-5 justify-center">
+              <span className="w-7 h-7 rounded-md bg-yellow-500 flex items-center justify-center text-black text-sm font-black italic">E</span>
+              <span className={`text-base font-bold ${t.textPrimary}`}>Eris</span>
+            </div>
+
+            <h2 className={`text-lg font-bold ${t.textPrimary} text-center mb-1`}>Sign in to trade</h2>
+            <p className={`text-xs ${t.textMuted} text-center mb-6`}>You need an account to place trades. Browsing is always free.</p>
+
+            <button
+              onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); }}
+              className="w-full py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-semibold text-sm mb-3 border-none cursor-pointer transition-colors"
+            >
+              Log in
+            </button>
+            <button
+              onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); }}
+              className="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-semibold text-sm mb-4 border-none cursor-pointer transition-colors"
+            >
+              Sign up
+            </button>
+
+            <p className={`text-xs ${t.textMuted} text-center`}>
+              By continuing you agree to our{" "}
+              <span className="text-yellow-400 cursor-pointer">Terms of Service</span>
+            </p>
+
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className={`mt-4 w-full text-xs ${t.textMuted} bg-transparent border-none cursor-pointer`}
+            >
+              Continue browsing
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

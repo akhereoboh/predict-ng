@@ -503,7 +503,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           ? "bg-red-500 border-red-500 text-white font-medium"
                           : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
                         : `${t.amountActive} ${t.amountActiveBorder} ${t.amountActiveText} font-medium`
-                      : `border border-white/20 bg-[#141414] text-white`
+                      : `border border-white/20 bg-[#0F0F0F] text-white`
                   }`}
                 >
                   ${a}

@@ -456,8 +456,8 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 ? activeSide === "YES" ? "border-green-500/60" : activeSide === "NO" ? "border-red-500/60" : t.border
                 : t.border
             } ${panelVisible ? "opacity-100" : "opacity-0"}`}>
-            <p className={`text-xs ${t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
-            <p className={`text-xs ${t.textMuted} mb-3`}>{selectedMarket.closes}</p>
+            <p className={`text-xs ${theme === "dark" ? "text-white/90" : t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
+            <p className={`text-xs ${theme === "dark" ? "text-white/60" : t.textMuted} mb-3`}>{selectedMarket.closes}</p>
 
             <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
               <button
@@ -478,7 +478,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               </button>
             </div>
 
-            <p className={`text-xs ${t.textMuted} mb-1.5`}>Amount</p>
+            <p className={`text-xs ${theme === "dark" ? "text-white/80" : t.textMuted} mb-1.5`}>Amount</p>
             <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-2`}>
               <span className={`text-sm font-bold ${t.accentText} shrink-0`}>$</span>
               <input
@@ -512,19 +512,19 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             </div>
 
             <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
-              <div className={`flex justify-between text-xs ${t.textMuted}`}>
-                <span>{side} price</span><span>{price.toFixed(2)}e per contract</span>
+              <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
+                <span>{side} price</span><span>${price.toFixed(2)} per contract</span>
               </div>
-              <div className={`flex justify-between text-xs ${t.textMuted}`}>
+              <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>Contracts</span><span>{contracts}</span>
               </div>
-              <div className={`flex justify-between text-xs ${t.textMuted}`}>
-                <span>Fee (2%)</span><span>e{fee}</span>
+              <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
+                <span>Fee (2%)</span><span>${fee}</span>
               </div>
               <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
               <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
                 <span>Payout if {side}</span>
-                <span className={t.payoutText}>e{payout.toFixed(2)}</span>
+                <span className={theme === "dark" && activeSide === "YES" ? "text-green-400" : theme === "dark" && activeSide === "NO" ? "text-red-400" : t.payoutText}>${payout.toFixed(2)}</span>
               </div>
             </div>
 
@@ -537,7 +537,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
           {/* PORTFOLIO */}
           <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
-            <p className={`text-xs font-medium ${t.textMuted} uppercase tracking-widest mb-3`}>Your positions</p>
+            <p className={`text-xs font-medium ${theme === "dark" ? "text-white/80" : t.textMuted} uppercase tracking-widest mb-3`}>Your positions</p>
             <div className="flex flex-col gap-2">
               {[
                 { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+84¢", up: true },
@@ -546,7 +546,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               ].map((pos) => (
                 <div key={pos.label} className={`flex items-center justify-between py-1.5 border-b ${t.borderLight} last:border-0`}>
                   <div>
-                    <p className={`text-xs font-medium ${t.textPrimary} leading-snug`}>{pos.label}</p>
+                    <p className={`text-xs font-medium ${theme === "dark" ? "text-white" : t.textPrimary} leading-snug`}>{pos.label}</p>
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                       pos.side === "YES"
                       ? theme === "dark" ? "bg-green-500/15 text-green-400" : "bg-blue-50 text-blue-600"

@@ -304,7 +304,7 @@ export default function MarketPage() {
         {/* CHANCE */}
         <div className="flex items-center gap-3 mb-4">
           <div>
-            <div className={`text-3xl font-bold ${t.accentText}`}>{market.chance}%</div>
+            <div className={`text-3xl font-bold ${t.textPrimary}`}>{market.chance}%</div>
             <div className={`text-xs ${t.textMuted} uppercase tracking-wide`}>Chance</div>
           </div>
           <div className={`flex items-center gap-1 text-sm font-medium ${market.change >= 0 ? "text-emerald-500" : "text-[#6B0D0D]"}`}>

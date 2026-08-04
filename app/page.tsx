@@ -150,6 +150,7 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authUsername, setAuthUsername] = useState("");
+  const [authPhone, setAuthPhone] = useState("");
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -765,6 +766,13 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                     placeholder="Email"
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
+                    className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none placeholder:${t.textMuted}`}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={authPhone}
+                    onChange={(e) => setAuthPhone(e.target.value)}
                     className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none placeholder:${t.textMuted}`}
                   />
                   <input

@@ -236,6 +236,7 @@ export default function MarketPage() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authUsername, setAuthUsername] = useState("");
+  const [authPhone, setAuthPhone] = useState("");
 
   const price = side === "YES" ? market.yesPrice : market.noPrice;
   const payout = (amount / price).toFixed(2);
@@ -809,6 +810,7 @@ export default function MarketPage() {
                 </div>
                 <div className="flex flex-col gap-2 mb-4">
                   <input type="email" placeholder="Email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
+                  <input type="tel" placeholder="Phone number" value={authPhone} onChange={(e) => setAuthPhone(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                   <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                 </div>
                 <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Create account</button>

@@ -151,6 +151,8 @@ export default function Home() {
   const [authPassword, setAuthPassword] = useState("");
   const [authUsername, setAuthUsername] = useState("");
   const [authPhone, setAuthPhone] = useState("");
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -229,6 +231,16 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     setBookmarks((prev) =>
       prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
     );
+  };
+
+  const openSearchModal = () => {
+    setShowSearchModal(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setSearchModalOpen(true)));
+  };
+
+  const closeSearchModal = () => {
+    setSearchModalOpen(false);
+    setTimeout(() => setShowSearchModal(false), 300);
   };
 
   return (
@@ -310,11 +322,11 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </button>
-          <div className={`flex items-center gap-2 ${t.inputBg} rounded-lg px-3 h-9 flex-1`}>
+          <div onClick={openSearchModal} className={`flex items-center gap-2 ${t.inputBg} rounded-lg px-3 h-9 flex-1 cursor-pointer`}>
             <svg className={`w-3.5 h-3.5 ${t.textMuted} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted}`} placeholder="Search" />
+            <input readOnly className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted} cursor-pointer`} placeholder="Search" />
           </div>
           <button className={`p-1.5 rounded-md ${t.textMuted} transition-colors cursor-pointer border-none bg-transparent shrink-0`}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +602,11 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           { label: "Search", icon: "search" },
           { label: "More", icon: "more" },
         ].map((item) => (
-          <button key={item.label} className={`flex flex-col items-center gap-1 ${item.label === "Home" ? t.textPrimary : t.textMuted} hover:${t.accentText} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}>
+          <button
+            key={item.label}
+            onClick={() => { if (item.icon === "breaking") router.push("/breaking"); if (item.icon === "search") openSearchModal(); }}
+            className={`flex flex-col items-center gap-1 ${item.label === "Home" ? t.textPrimary : t.textMuted} hover:${t.accentText} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {item.icon === "home" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
               {item.icon === "breaking" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />}
@@ -601,6 +617,82 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           </button>
         ))}
       </nav>
+    {/* SEARCH MODAL */}
+      {showSearchModal && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end justify-center transition-colors duration-300 ${searchModalOpen ? "bg-black/70" : "bg-black/0"}`}
+          onClick={closeSearchModal}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full max-w-lg ${t.cardBg} rounded-t-2xl border-t ${t.border} px-4 pt-2 pb-6 max-h-[85vh] overflow-y-auto transition-transform duration-300 ease-out ${searchModalOpen ? "translate-y-0" : "translate-y-full"}`}
+          >
+            <div className="flex justify-center pt-1 pb-3">
+              <div className={`w-10 h-1 rounded-full ${theme === "dark" ? "bg-white/20" : "bg-slate-300"}`} />
+            </div>
+
+            <div className={`flex items-center gap-2 ${t.inputBg} rounded-xl px-3 h-11 mb-5`}>
+              <svg className={`w-4 h-4 ${t.textMuted} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                autoFocus
+                className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted}`}
+                placeholder="Search Eris markets..."
+              />
+            </div>
+
+            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-2`}>BROWSE</div>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {[
+                { label: "New", d: "M12 4v16m8-8H4" },
+                { label: "Trending", d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
+                { label: "Popular", d: "M12 21C7 16 3 12.5 3 8.5 3 5.9 5 4 7.5 4 9 4 10.5 4.8 12 6.4 13.5 4.8 15 4 16.5 4 19 4 21 5.9 21 8.5 21 12.5 17 16 12 21z" },
+                { label: "Liquid", d: "M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z" },
+                { label: "Ending Soon", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+                { label: "Competitive", d: "M12 15a4 4 0 100-8 4 4 0 000 8zm0 0v6m-4-2.5l-2 2M16 18.5l2 2" },
+              ].map((b) => (
+                <button
+                  key={b.label}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-full border ${t.border} ${t.textPrimary} font-medium cursor-pointer bg-transparent transition-colors hover:${t.inputBg}`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={b.d} />
+                  </svg>
+                  {b.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-2`}>TOPICS</div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Live Crypto", emoji: "📈", bg: "#3B1B1B" },
+                { label: "Politics", emoji: "🏛️", bg: "#3B2A1B" },
+                { label: "Middle East", emoji: "🌍", bg: "#1B2E3B" },
+                { label: "Crypto", emoji: "₿", bg: "#3B2E12" },
+                { label: "Sports", emoji: "🏀", bg: "#1B2E3B" },
+                { label: "Pop Culture", emoji: "🎭", bg: "#3B2A1B" },
+                { label: "Tech", emoji: "💻", bg: "#132E2B" },
+                { label: "AI", emoji: "🤖", bg: "#1B233B" },
+              ].map((topic) => (
+                <button
+                  key={topic.label}
+                  className={`flex items-center gap-2.5 ${t.inputBg} rounded-xl px-3 py-3 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
+                >
+                  <span
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0"
+                    style={{ backgroundColor: theme === "dark" ? topic.bg : "#F1F5F9" }}
+                  >
+                    {topic.emoji}
+                  </span>
+                  <span className={`text-sm font-medium ${t.textPrimary}`}>{topic.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     {/* AUTH MODAL */}
       {showAuthModal && (
         <div
@@ -803,4 +895,3 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     </div>
   );
 }
-    

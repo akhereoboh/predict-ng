@@ -113,7 +113,7 @@ export default function Breaking() {
             onClick={() => router.push("/")}
             className="flex items-center gap-1.5 cursor-pointer"
           >
-            <span className="w-6 h-6 rounded-md bg-yellow-500 flex items-center justify-center text-black text-xs font-black italic">E</span>
+            <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
           <div className="flex items-center gap-4">

@@ -260,7 +260,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
         {/* ROW 1 */}
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
           <div className="flex items-center gap-1.5">
-            <span className="w-6 h-6 rounded-md bg-yellow-500 flex items-center justify-center text-black text-xs font-black italic">E</span>
+            <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
           <div className="flex items-center gap-4">
@@ -358,7 +358,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               style={{ animationDelay: `${i * 0.06}s` }}
               className={`relative overflow-hidden ghost-in ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
                 selectedMarket.id === market.id
-                  ? `${theme === "dark" ? "border-yellow-500 shadow-yellow-900/20" : "border-blue-500 shadow-blue-100"} shadow-md`
+                  ? `${theme === "dark" ? "border-[#CCFF00] shadow-[#CCFF00]/20" : "border-blue-500 shadow-blue-100"} shadow-md`
                   : `${t.border} hover:shadow-md`
               }`}
             >
@@ -714,7 +714,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           >
             {/* Logo */}
             <div className="flex items-center gap-2 mb-5 justify-center">
-              <span className="w-7 h-7 rounded-md bg-yellow-500 flex items-center justify-center text-black text-sm font-black italic">E</span>
+              <span className="w-7 h-7 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-sm font-black italic">E</span>
               <span className={`text-base font-bold ${t.textPrimary}`}>Eris</span>
             </div>
 
@@ -763,7 +763,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
                 <p className={`text-xs ${t.textMuted} text-center`}>
                   By continuing you agree to our{" "}
-                  <span className="text-yellow-400 cursor-pointer">Terms of Service</span>
+                  <span className="text-[#CCFF00] cursor-pointer">Terms of Service</span>
                 </p>
                 <button onClick={() => { setShowAuthModal(false); setAuthView("choice"); }} className={`mt-4 w-full text-xs ${t.textMuted} bg-transparent border-none cursor-pointer`}>
                   Continue browsing
@@ -827,7 +827,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>
                   No account?{" "}
-                  <span onClick={() => setAuthView("signup")} className="text-yellow-400 cursor-pointer">Sign up</span>
+                  <span onClick={() => setAuthView("signup")} className="text-[#CCFF00] cursor-pointer">Sign up</span>
                 </p>
               </>
             )}
@@ -894,7 +894,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>
                   Already have an account?{" "}
-                  <span onClick={() => setAuthView("login")} className="text-yellow-400 cursor-pointer">Log in</span>
+                  <span onClick={() => setAuthView("login")} className="text-[#CCFF00] cursor-pointer">Log in</span>
                 </p>
               </>
             )}

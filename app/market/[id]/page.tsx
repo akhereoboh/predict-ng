@@ -246,7 +246,7 @@ export default function MarketPage() {
     if (theme === "dark") {
       if (cat === "Economy") return "bg-amber-900/40 text-amber-400";
       if (cat === "Politics") return "bg-purple-900/40 text-purple-400";
-      if (cat === "Sports") return "bg-yellow-900/40 text-yellow-400";
+      if (cat === "Sports") return "bg-[#CCFF00]/10 text-[#CCFF00]";
       return "bg-emerald-900/40 text-emerald-400";
     }
     if (cat === "Economy") return "bg-amber-100 text-amber-800";
@@ -464,7 +464,7 @@ export default function MarketPage() {
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`flex-1 text-xs py-3 font-medium cursor-pointer border-none bg-transparent transition-colors ${
                   activeTab === tab
-                    ? `${t.accentText} border-b-2 ${theme === "dark" ? "border-yellow-500" : "border-blue-600"}`
+                    ? `${t.accentText} border-b-2 ${theme === "dark" ? "border-[#CCFF00]" : "border-blue-600"}`
                     : t.textMuted
                 }`}
               >{tab}</button>
@@ -726,7 +726,7 @@ export default function MarketPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 mb-5 justify-center">
-              <span className="w-7 h-7 rounded-md bg-yellow-500 flex items-center justify-center text-black text-sm font-black italic">E</span>
+              <span className="w-7 h-7 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-sm font-black italic">E</span>
               <span className={`text-base font-bold ${t.textPrimary}`}>Eris</span>
             </div>
 
@@ -751,7 +751,7 @@ export default function MarketPage() {
                 </div>
                 <button onClick={() => setAuthView("login")} className={`w-full py-2.5 rounded-xl font-semibold text-sm mb-3 border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Log in</button>
                 <button onClick={() => setAuthView("signup")} className={`w-full py-2.5 rounded-xl font-semibold text-sm mb-4 border cursor-pointer transition-colors ${theme === "dark" ? "bg-black text-white border-white/20 hover:bg-white/10" : "bg-white text-black border-black/20 hover:bg-slate-50"}`}>Sign up</button>
-                <p className={`text-xs ${t.textMuted} text-center`}>By continuing you agree to our <span className="text-yellow-400 cursor-pointer">Terms of Service</span></p>
+                <p className={`text-xs ${t.textMuted} text-center`}>By continuing you agree to our <span className="text-[#CCFF00] cursor-pointer">Terms of Service</span></p>
                 <button onClick={() => { setShowAuthModal(false); setAuthView("choice"); }} className={`mt-4 w-full text-xs ${t.textMuted} bg-transparent border-none cursor-pointer`}>Continue browsing</button>
               </>
             )}
@@ -783,7 +783,7 @@ export default function MarketPage() {
                 </div>
                 <button className={`text-xs ${t.textMuted} bg-transparent border-none cursor-pointer mb-4 w-full text-right`}>Forgot password?</button>
                 <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Log in</button>
-                <p className={`text-xs ${t.textMuted} text-center mt-4`}>No account? <span onClick={() => setAuthView("signup")} className="text-yellow-400 cursor-pointer">Sign up</span></p>
+                <p className={`text-xs ${t.textMuted} text-center mt-4`}>No account? <span onClick={() => setAuthView("signup")} className="text-[#CCFF00] cursor-pointer">Sign up</span></p>
               </>
             )}
 
@@ -814,7 +814,7 @@ export default function MarketPage() {
                   <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                 </div>
                 <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Create account</button>
-                <p className={`text-xs ${t.textMuted} text-center mt-4`}>Already have an account? <span onClick={() => setAuthView("login")} className="text-yellow-400 cursor-pointer">Log in</span></p>
+                <p className={`text-xs ${t.textMuted} text-center mt-4`}>Already have an account? <span onClick={() => setAuthView("login")} className="text-[#CCFF00] cursor-pointer">Log in</span></p>
               </>
             )}
           </div>

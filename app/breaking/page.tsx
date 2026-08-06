@@ -256,7 +256,7 @@ export default function Breaking() {
         ].map((item) => (
           <button
             key={item.label}
-            onClick={() => { if (item.icon === "home") router.push("/"); if (item.icon === "search") router.push("/?search=1"); }}
+            onClick={() => { if (item.icon === "home") router.push("/"); if (item.icon === "search") router.push("/?search=1"); if (item.icon === "more") router.push("/more"); }}
             className={`flex flex-col items-center gap-1 ${item.label === "Breaking" ? t.textPrimary : t.textMuted} hover:${t.accentText} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -701,7 +701,7 @@ export default function MarketPage() {
             { label: "Breaking", icon: "breaking" },
             { label: `E${(amount / price).toFixed(0)}`, icon: "portfolio" },
           ].map((item) => (
-            <button key={item.label} onClick={() => { if (item.icon === "home") router.push("/"); if (item.icon === "breaking") router.push("/breaking"); }}
+            <button key={item.label} onClick={() => { if (item.icon === "home") router.push("/"); if (item.icon === "breaking") router.push("/breaking"); if (item.icon === "search") router.push("/?search=1"); if (item.icon === "more") router.push("/more"); }}
               className={`flex flex-col items-center gap-1 ${t.textMuted} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

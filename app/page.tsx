@@ -250,6 +250,11 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
       const id = requestAnimationFrame(() => openSearchModal());
       return () => cancelAnimationFrame(id);
     }
+    if (params.get("auth") === "1") {
+      window.history.replaceState({}, "", "/");
+      const id = requestAnimationFrame(() => setShowAuthModal(true));
+      return () => cancelAnimationFrame(id);
+    }
   }, []);
 
   return (
@@ -613,7 +618,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
         ].map((item) => (
           <button
             key={item.label}
-            onClick={() => { if (item.icon === "breaking") router.push("/breaking"); if (item.icon === "search") openSearchModal(); }}
+            onClick={() => { if (item.icon === "breaking") router.push("/breaking"); if (item.icon === "search") openSearchModal(); if (item.icon === "more") router.push("/more"); }}
             className={`flex flex-col items-center gap-1 ${item.label === "Home" ? t.textPrimary : t.textMuted} hover:${t.accentText} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

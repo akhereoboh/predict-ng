@@ -243,6 +243,15 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     setTimeout(() => setShowSearchModal(false), 300);
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("search") === "1") {
+      window.history.replaceState({}, "", "/");
+      const id = requestAnimationFrame(() => openSearchModal());
+      return () => cancelAnimationFrame(id);
+    }
+  }, []);
+
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans`}>
       {/* NAV */}
@@ -895,4 +904,3 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     </div>
   );
 }
-    

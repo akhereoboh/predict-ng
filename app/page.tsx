@@ -625,25 +625,25 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-lg ${t.cardBg} rounded-t-2xl border-t ${t.border} px-4 pt-2 pb-6 max-h-[85vh] overflow-y-auto transition-transform duration-300 ease-out ${searchModalOpen ? "translate-y-0" : "translate-y-full"}`}
+            className={`w-full max-w-lg ${t.cardBg} rounded-t-2xl border-t ${t.border} px-4 pt-2 pb-6 h-[92vh] overflow-y-auto transition-transform duration-300 ease-out ${searchModalOpen ? "translate-y-0" : "translate-y-full"}`}
           >
             <div className="flex justify-center pt-1 pb-3">
               <div className={`w-10 h-1 rounded-full ${theme === "dark" ? "bg-white/20" : "bg-slate-300"}`} />
             </div>
 
-            <div className={`flex items-center gap-2 ${t.inputBg} rounded-xl px-3 h-11 mb-5`}>
-              <svg className={`w-4 h-4 ${t.textMuted} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className={`flex items-center gap-2 ${t.inputBg} rounded-xl px-4 h-12 mb-6`}>
+              <svg className={`w-5 h-5 ${t.textMuted} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 autoFocus
-                className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted}`}
+                className={`bg-transparent text-base ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted}`}
                 placeholder="Search Eris markets..."
               />
             </div>
 
-            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-2`}>BROWSE</div>
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>BROWSE</div>
+            <div className="flex flex-wrap gap-2.5 mb-7">
               {[
                 { label: "New", d: "M12 4v16m8-8H4" },
                 { label: "Trending", d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
@@ -654,9 +654,9 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               ].map((b) => (
                 <button
                   key={b.label}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-full border ${t.border} ${t.textPrimary} font-medium cursor-pointer bg-transparent transition-colors hover:${t.inputBg}`}
+                  className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-full border ${t.border} ${t.textPrimary} font-medium cursor-pointer bg-transparent transition-colors hover:${t.inputBg}`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={b.d} />
                   </svg>
                   {b.label}
@@ -664,8 +664,8 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               ))}
             </div>
 
-            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-2`}>TOPICS</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>TOPICS</div>
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Live Crypto", emoji: "📈", bg: "#3B1B1B" },
                 { label: "Politics", emoji: "🏛️", bg: "#3B2A1B" },
@@ -678,15 +678,15 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               ].map((topic) => (
                 <button
                   key={topic.label}
-                  className={`flex items-center gap-2.5 ${t.inputBg} rounded-xl px-3 py-3 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
+                  className={`flex items-center gap-3 ${t.inputBg} rounded-xl px-4 py-4 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
                 >
                   <span
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
                     style={{ backgroundColor: theme === "dark" ? topic.bg : "#F1F5F9" }}
                   >
                     {topic.emoji}
                   </span>
-                  <span className={`text-sm font-medium ${t.textPrimary}`}>{topic.label}</span>
+                  <span className={`text-base font-medium ${t.textPrimary}`}>{topic.label}</span>
                 </button>
               ))}
             </div>
@@ -895,3 +895,4 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     </div>
   );
 }
+    

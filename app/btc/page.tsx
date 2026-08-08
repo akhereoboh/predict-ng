@@ -289,14 +289,40 @@ export default function BtcLive() {
                 +₦{b.amountNaira}
               </span>
             ))}
-            {history.length > 1 ? (
+            {history.length > 1 ? (() => {
+              // Sliding time window -- domain is always [now - WINDOW, now],
+              // recalculated fresh every poll. This is what actually creates
+              // Polymarket's "time flowing left" illusion: the window itself
+              // moves forward each tick, so old points scroll off the left
+              // edge instead of the whole history just compressing sideways.
+              const WINDOW_MS = 90_000;
+              const latestT = history[history.length - 1].t;
+              const xDomain: [number, number] = [latestT - WINDOW_MS, latestT];
+
+              // Adaptive Y range -- when open/current price are close together,
+              // a fixed pixel-padding makes the line look almost flat. Instead,
+              // enforce a minimum visual span so small real moves still read
+              // as a clear, dramatic line -- same trick real trading charts use.
+              const prices = history.map((p) => p.price);
+              if (live?.open_price_usd != null) prices.push(live.open_price_usd);
+              const dataMin = Math.min(...prices);
+              const dataMax = Math.max(...prices);
+              const range = dataMax - dataMin;
+              const MIN_SPAN = 40; // dollars
+              const center = (dataMin + dataMax) / 2;
+              const yDomain: [number, number] =
+                range < MIN_SPAN
+                  ? [center - MIN_SPAN / 2, center + MIN_SPAN / 2]
+                  : [dataMin - range * 0.15, dataMax + range * 0.15];
+
+              return (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={history} margin={{ top: 16, right: 56, left: 0, bottom: 8 }}>
                   <CartesianGrid horizontal vertical={false} stroke={theme === "dark" ? "#1E1E1E" : "#EEF2F6"} />
                   <XAxis
                     dataKey="t"
                     type="number"
-                    domain={["dataMin", "dataMax"]}
+                    domain={xDomain}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
@@ -305,7 +331,7 @@ export default function BtcLive() {
                   />
                   <YAxis
                     orientation="right"
-                    domain={["dataMin - 20", "dataMax + 20"]}
+                    domain={yDomain}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
@@ -356,7 +382,8 @@ export default function BtcLive() {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            ) : (
+              );
+            })() : (
               <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading live price…</div>
             )}
           </div>

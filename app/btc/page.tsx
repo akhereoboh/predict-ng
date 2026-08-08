@@ -9,6 +9,14 @@ const API_BASE = "https://sireai.uk/pm-api";
 const POLL_MS = 3000;
 const MAX_POINTS = 150; // ~7.5 minutes of history at 3s ticks
 
+type TradeRecord = {
+  id: number;
+  action: "BUY" | "SELL";
+  outcome: "YES" | "NO";
+  amount_kobo: number;
+  created_at: string;
+};
+
 type LiveData = {
   market_id: string | null;
   question: string | null;
@@ -19,6 +27,7 @@ type LiveData = {
   current_price_usd: number;
   volume_naira: number | null;
   trader_count: number | null;
+  recent_trades: TradeRecord[];
 };
 
 type Point = { t: number; price: number };
@@ -72,6 +81,8 @@ export default function BtcLive() {
     up: [0.48, 0.49, 0.50, 0.51].map(() => Math.floor(Math.random() * 500 + 100)),
     down: [0.49, 0.50, 0.51, 0.52].map(() => Math.floor(Math.random() * 500 + 100)),
   }));
+  const [tradeBubbles, setTradeBubbles] = useState<{ id: number; outcome: "YES" | "NO"; amountNaira: number; x: number }[]>([]);
+  const seenTradeIds = useRef<Set<number> | null>(null);
 
   useEffect(() => {
     const poll = async () => {
@@ -85,6 +96,27 @@ export default function BtcLive() {
           const next = [...prev, { t: Date.now(), price: data.current_price_usd }];
           return next.length > MAX_POINTS ? next.slice(next.length - MAX_POINTS) : next;
         });
+
+        // Only animate trades that are genuinely NEW since the last poll --
+        // real buys/sells from real users, never simulated. The first poll
+        // just records what already happened without animating any of it,
+        // so opening the page doesn't dump a pile of "historical" bubbles.
+        const trades = data.recent_trades ?? [];
+        if (seenTradeIds.current === null) {
+          seenTradeIds.current = new Set(trades.map((tr) => tr.id));
+        } else {
+          const fresh = trades.filter((tr) => !seenTradeIds.current!.has(tr.id));
+          fresh.forEach((tr) => {
+            seenTradeIds.current!.add(tr.id);
+            const bubbleId = Date.now() + Math.random();
+            const amountNaira = Math.round((tr.amount_kobo || 0) / 100);
+            const x = 10 + Math.random() * 75;
+            setTradeBubbles((prev) => [...prev, { id: bubbleId, outcome: tr.outcome, amountNaira, x }]);
+            setTimeout(() => {
+              setTradeBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
+            }, 1900);
+          });
+        }
       } catch {
         setError("Can't reach the live price feed right now.");
       }
@@ -140,7 +172,6 @@ export default function BtcLive() {
 
   const yes = live?.price_yes ?? 50;
   const no = live?.price_no ?? 50;
-  const chanceDelta = yes - 50; // round always opens locked at 50/50
   const price = side === "YES" ? yes / 100 : no / 100;
   const payout = price > 0 ? (amount / price).toFixed(2) : "0.00";
   const fee = (amount * 0.02).toFixed(2);
@@ -205,17 +236,29 @@ export default function BtcLive() {
           </div>
         )}
 
-        {/* CHANCE */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* PRICE TO BEAT + CURRENT PRICE */}
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <div className={`text-3xl font-bold ${t.textPrimary}`}>{Math.round(yes)}%</div>
-            <div className={`text-xs ${t.textMuted} uppercase tracking-wide`}>Chance of Up</div>
+            <div className={`text-xs ${t.textMuted} mb-1`}>Price To Beat</div>
+            <div className={`text-2xl font-bold ${t.textPrimary}`}>
+              ${live?.open_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+            </div>
           </div>
-          <div className={`flex items-center gap-1 text-sm font-medium ${chanceDelta >= 0 ? "text-green-500" : "text-red-500"}`}>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={chanceDelta >= 0 ? "M5 10l7-7m0 0l7 7m-7-7v18" : "M19 14l-7 7m0 0l-7-7m7 7V3"} />
-            </svg>
-            {Math.abs(chanceDelta).toFixed(0)}% this round
+          <div className="text-right">
+            <div className={`text-xs ${t.textMuted} mb-1`}>Current Price</div>
+            <div className="flex items-center gap-1.5 justify-end">
+              {live?.open_price_usd != null && (
+                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-green-500" : isDown ? "text-red-500" : t.textMuted}`}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={isDown ? "M19 14l-7 7m0 0l-7-7m7 7V3" : "M5 10l7-7m0 0l7 7m-7-7v18"} />
+                  </svg>
+                  ${Math.abs((live?.current_price_usd ?? 0) - (live?.open_price_usd ?? 0)).toFixed(2)}
+                </span>
+              )}
+              <span className={`text-2xl font-bold ${t.textPrimary}`}>
+                ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -236,12 +279,30 @@ export default function BtcLive() {
 
         {/* LIVE CHART */}
         <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
-          <div style={{ height: 260 }}>
+          <div className="relative" style={{ height: 280 }}>
+            {tradeBubbles.map((b) => (
+              <span
+                key={b.id}
+                className="float-up"
+                style={{ left: `${b.x}%`, bottom: "40px", color: b.outcome === "YES" ? "#4ade80" : "#ef4444" }}
+              >
+                +₦{b.amountNaira}
+              </span>
+            ))}
             {history.length > 1 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history} margin={{ top: 16, right: 56, left: 0, bottom: 0 }}>
+                <LineChart data={history} margin={{ top: 16, right: 56, left: 0, bottom: 8 }}>
                   <CartesianGrid horizontal vertical={false} stroke={theme === "dark" ? "#1E1E1E" : "#EEF2F6"} />
-                  <XAxis dataKey="t" hide />
+                  <XAxis
+                    dataKey="t"
+                    type="number"
+                    domain={["dataMin", "dataMax"]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
+                    tickFormatter={(t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}
+                    minTickGap={50}
+                  />
                   <YAxis
                     orientation="right"
                     domain={["dataMin - 20", "dataMax + 20"]}

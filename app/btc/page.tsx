@@ -101,6 +101,16 @@ export default function BtcLive() {
   const mins = secondsLeft != null ? Math.floor(secondsLeft / 60) : null;
   const secs = secondsLeft != null ? secondsLeft % 60 : null;
 
+  const timeRangeLabel = (() => {
+    if (!live?.cycle_ends_at) return null;
+    const closesAt = new Date(live.cycle_ends_at);
+    const opensAt = new Date(closesAt.getTime() - 5 * 60 * 1000);
+    const dateLabel = opensAt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const openTime = opensAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const closeTime = closesAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return `${dateLabel}, ${openTime}–${closeTime}`;
+  })();
+
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-20`}>
       {/* NAV */}
@@ -128,11 +138,21 @@ export default function BtcLive() {
       </nav>
 
       <div className="max-w-2xl mx-auto px-3 md:px-6 py-5">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-6 h-6 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-xs font-bold shrink-0">₿</span>
-          <h1 className={`text-lg font-bold ${t.textPrimary}`}>
-            {live?.question ?? "Will BTC be up in the next 5 minutes?"}
-          </h1>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-base font-bold shrink-0">₿</span>
+            <div>
+              <h1 className={`text-base font-bold ${t.textPrimary} leading-tight`}>BTC Up or Down 5m</h1>
+              {timeRangeLabel && <p className={`text-xs ${t.textMuted}`}>{timeRangeLabel}</p>}
+            </div>
+          </div>
+          <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${theme === "dark" ? "bg-[#1A1A1A] text-white" : "bg-slate-100 text-slate-700"}`}>
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5484D] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#E5484D]"></span>
+            </span>
+            Live
+          </span>
         </div>
 
         {error && (
@@ -141,27 +161,37 @@ export default function BtcLive() {
           </div>
         )}
 
-        {/* PRICE + COUNTDOWN */}
-        <div className="flex items-end justify-between mb-4">
+        {/* PRICE TO BEAT + FINAL PRICE */}
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <div className={`text-3xl font-bold ${t.textPrimary}`}>
-              ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+            <div className={`text-xs ${t.textMuted} mb-1`}>Price To Beat</div>
+            <div className={`text-2xl font-bold ${t.textPrimary}`}>
+              ${live?.open_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
             </div>
-            {live?.open_price_usd != null && (
-              <div className={`text-xs ${t.textMuted}`}>
-                Open: ${live.open_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              </div>
-            )}
           </div>
-          {secondsLeft != null && (
-            <div className="text-right">
-              <div className={`text-xs ${t.textMuted} mb-0.5`}>Resolves in</div>
-              <div className={`text-xl font-mono font-bold ${secondsLeft <= 30 ? "text-[#E5484D]" : t.textPrimary}`}>
-                {mins}:{String(secs).padStart(2, "0")}
-              </div>
+          <div className="text-right">
+            <div className={`text-xs ${t.textMuted} mb-1`}>Final Price</div>
+            <div className="flex items-center gap-1.5 justify-end">
+              {live?.open_price_usd != null && (
+                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-emerald-500" : isDown ? "text-[#E5484D]" : t.textMuted}`}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={isDown ? "M19 14l-7 7m0 0l-7-7m7 7V3" : "M5 10l7-7m0 0l7 7m-7-7v18"} />
+                  </svg>
+                  ${Math.abs((live.current_price_usd ?? 0) - live.open_price_usd).toFixed(2)}
+                </span>
+              )}
+              <span className={`text-2xl font-bold ${t.textPrimary}`}>
+                ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+              </span>
             </div>
-          )}
+          </div>
         </div>
+
+        {secondsLeft != null && (
+          <div className={`text-xs ${t.textMuted} mb-2 text-right`}>
+            Resolves in <span className={`font-mono font-semibold ${secondsLeft <= 30 ? "text-[#E5484D]" : t.textPrimary}`}>{mins}:{String(secs).padStart(2, "0")}</span>
+          </div>
+        )}
 
         {/* LIVE CHART */}
         <div className={`rounded-2xl border ${t.border} ${t.cardBg} p-3 mb-4`} style={{ height: 280 }}>
@@ -211,6 +241,7 @@ export default function BtcLive() {
                     y={live.current_price_usd}
                     stroke="#CCFF00"
                     strokeWidth={1}
+                    strokeDasharray="4 4"
                     label={{
                       value: `$${live.current_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
                       position: "right",

@@ -84,6 +84,21 @@ export default function BtcLive() {
   const [tradeBubbles, setTradeBubbles] = useState<{ id: number; outcome: "YES" | "NO"; amountNaira: number; x: number }[]>([]);
   const seenTradeIds = useRef<Set<number> | null>(null);
 
+  // Drives continuous, free-flowing motion instead of the chart only
+  // updating once every POLL_MS when real data arrives. Ticks every
+  // animation frame (~60fps), so the sliding time window and the
+  // interpolated arrow position both glide smoothly rather than jumping.
+  const [frameNow, setFrameNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    let raf: number;
+    const loop = () => {
+      setFrameNow(Date.now());
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   useEffect(() => {
     const poll = async () => {
       try {
@@ -262,21 +277,6 @@ export default function BtcLive() {
           </div>
         </div>
 
-        {/* YES/NO PILL */}
-        <div className="flex gap-2 mb-4">
-          {(["YES", "NO"] as const).map((s) => (
-            <button key={s} onClick={() => setSide(s)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
-                side === s
-                  ? s === "YES"
-                    ? theme === "dark" ? "bg-green-500 border-transparent text-black" : `${t.accent} border-transparent text-white`
-                    : theme === "dark" ? "bg-red-500 border-transparent text-white" : "bg-[#6B0D0D] border-transparent text-white"
-                  : `${t.navBg} ${t.border} ${t.textMuted}`
-              }`}
-            >{s === "YES" ? "Up" : "Down"}</button>
-          ))}
-        </div>
-
         {/* LIVE CHART */}
         <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
           <div className="relative" style={{ height: 280 }}>
@@ -290,14 +290,25 @@ export default function BtcLive() {
               </span>
             ))}
             {history.length > 1 ? (() => {
-              // Sliding time window -- domain is always [now - WINDOW, now],
-              // recalculated fresh every poll. This is what actually creates
-              // Polymarket's "time flowing left" illusion: the window itself
-              // moves forward each tick, so old points scroll off the left
-              // edge instead of the whole history just compressing sideways.
+              // Sliding time window -- domain is always [frameNow - WINDOW, frameNow],
+              // recalculated every animation frame (not just every poll). This is
+              // what actually creates the "time flowing left" illusion: the window
+              // itself glides forward continuously instead of jumping every 3s.
               const WINDOW_MS = 90_000;
-              const latestT = history[history.length - 1].t;
-              const xDomain: [number, number] = [latestT - WINDOW_MS, latestT];
+              const xDomain: [number, number] = [frameNow - WINDOW_MS, frameNow];
+
+              // Free-flowing motion: real data only arrives every POLL_MS, so
+              // instead of the line/arrow jumping to each new point, we smoothly
+              // interpolate between the last two REAL points based on how far
+              // through the current poll interval we are. This deliberately
+              // trails the true latest value by up to one poll interval -- the
+              // "slightly backwards" lag -- in exchange for genuinely fluid motion
+              // rather than visible ticks.
+              const lastReal = history[history.length - 1];
+              const prevReal = history.length > 1 ? history[history.length - 2] : lastReal;
+              const frac = Math.min(1, Math.max(0, (frameNow - lastReal.t) / POLL_MS));
+              const smoothPrice = prevReal.price + (lastReal.price - prevReal.price) * frac;
+              const chartData = [...history, { t: frameNow, price: smoothPrice }];
 
               // Adaptive Y range -- when open/current price are close together,
               // a fixed pixel-padding makes the line look almost flat. Instead,
@@ -317,7 +328,7 @@ export default function BtcLive() {
 
               return (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history} margin={{ top: 16, right: 56, left: 0, bottom: 8 }}>
+                <LineChart data={chartData} margin={{ top: 16, right: 56, left: 0, bottom: 8 }}>
                   <CartesianGrid horizontal vertical={false} stroke={theme === "dark" ? "#1E1E1E" : "#EEF2F6"} />
                   <XAxis
                     dataKey="t"
@@ -373,8 +384,8 @@ export default function BtcLive() {
                   )}
                   <Line type="monotone" dataKey="price" stroke={lineColor} strokeWidth={2} dot={false} isAnimationActive={false} />
                   <ReferenceDot
-                    x={history[history.length - 1].t}
-                    y={history[history.length - 1].price}
+                    x={frameNow}
+                    y={smoothPrice}
                     r={0}
                     shape={(props: { cx?: number; cy?: number }) => (
                       <ArrowHead cx={props.cx} cy={props.cy} color={lineColor} bgColor={theme === "dark" ? "#111111" : "#FFFFFF"} angle={arrowAngle} />

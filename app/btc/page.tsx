@@ -85,17 +85,18 @@ export default function BtcLive() {
   const seenTradeIds = useRef<Set<number> | null>(null);
 
   // Drives continuous, free-flowing motion instead of the chart only
-  // updating once every POLL_MS when real data arrives. recharts redraws
-  // its entire SVG tree (every gridline, tick, and the full line path) on
-  // each update, so a true 60fps loop can actually cause stutter rather
-  // than fix it -- the render work competes with the browser's paint
-  // budget every single frame. ~12 updates/sec is dramatically smoother
-  // than the old 3000ms ticks while staying inside a realistic render
-  // budget for a full SVG-based chart library.
+  // updating once every POLL_MS when real data arrives. Ticks every
+  // animation frame (~60fps), so the sliding time window and the
+  // interpolated arrow position both glide smoothly rather than jumping.
   const [frameNow, setFrameNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setFrameNow(Date.now()), 80);
-    return () => clearInterval(id);
+    let raf: number;
+    const loop = () => {
+      setFrameNow(Date.now());
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   useEffect(() => {
@@ -289,19 +290,12 @@ export default function BtcLive() {
               </span>
             ))}
             {history.length > 1 ? (() => {
-              // Sliding time window -- domain is always [windowStart, frameNow],
-              // recalculated continuously. This creates the "time flowing left"
-              // illusion: the window glides forward instead of jumping every 3s.
-              // windowStart is clamped to the EARLIEST real point we actually
-              // have -- without this, a fresh page load (or reload) would show
-              // a mostly-empty 90-second window that visibly "fills in" over
-              // the next minute and a half. Instead the chart fills its full
-              // width immediately with whatever data exists, and only becomes
-              // a true sliding window once enough history has accumulated.
+              // Sliding time window -- domain is always [frameNow - WINDOW, frameNow],
+              // recalculated every animation frame (not just every poll). This is
+              // what actually creates the "time flowing left" illusion: the window
+              // itself glides forward continuously instead of jumping every 3s.
               const WINDOW_MS = 90_000;
-              const earliestT = history[0].t;
-              const windowStart = Math.max(frameNow - WINDOW_MS, earliestT);
-              const xDomain: [number, number] = [windowStart, frameNow];
+              const xDomain: [number, number] = [frameNow - WINDOW_MS, frameNow];
 
               // Free-flowing motion: real data only arrives every POLL_MS, so
               // instead of the line/arrow jumping to each new point, we smoothly
@@ -320,15 +314,12 @@ export default function BtcLive() {
               // a fixed pixel-padding makes the line look almost flat. Instead,
               // enforce a minimum visual span so small real moves still read
               // as a clear, dramatic line -- same trick real trading charts use.
-              // Kept tight ($12) since BTC often only moves a few dollars within
-              // a single 5-minute round -- a looser floor makes even a real,
-              // meaningful move look flat.
               const prices = history.map((p) => p.price);
               if (live?.open_price_usd != null) prices.push(live.open_price_usd);
               const dataMin = Math.min(...prices);
               const dataMax = Math.max(...prices);
               const range = dataMax - dataMin;
-              const MIN_SPAN = 12; // dollars
+              const MIN_SPAN = 40; // dollars
               const center = (dataMin + dataMax) / 2;
               const yDomain: [number, number] =
                 range < MIN_SPAN

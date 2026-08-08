@@ -400,69 +400,94 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           {(activeFilter === "All" || activeFilter === "Crypto") && (() => {
             const yes = btcLive?.price_yes ?? 50;
             const no = btcLive?.price_no ?? 50;
-            const leaning = yes >= no ? "Up" : "Down";
-            const leaningPct = Math.round(Math.max(yes, no));
-            const ringColor = leaning === "Up" ? "#22C55E" : "#EF4444";
-            const r = 15;
-            const circumference = 2 * Math.PI * r;
-            const offset = circumference * (1 - leaningPct / 100);
             const mins = btcSecondsLeft != null ? Math.floor(btcSecondsLeft / 60) : null;
             const secs = btcSecondsLeft != null ? btcSecondsLeft % 60 : null;
+            const pctElapsed = btcSecondsLeft != null ? Math.round(((300 - btcSecondsLeft) / 300) * 100) : 0;
+            const r = 15;
+            const circumference = 2 * Math.PI * r;
+            const offset = circumference * (1 - pctElapsed / 100);
 
             return (
-              <div className={`relative overflow-hidden rounded-xl p-4 border ${t.border} ${t.cardBg}`}>
-                <div className="flex items-start justify-between mb-3">
+              <div
+                onClick={() => router.push("/btc")}
+                className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
+              >
+                <div className="flex justify-between items-start gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
-                    <p className={`text-sm font-bold ${t.textPrimary}`}>BTC Up or Down 5m</p>
+                    <span className="w-8 h-8 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
+                    <div>
+                      <p className={`text-sm font-medium leading-snug ${t.textPrimary}`}>BTC Up or Down 5m</p>
+                      <p className={`text-xs ${t.textMuted} mt-0.5 flex items-center gap-1.5`}>
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#EF4444]"></span>
+                        </span>
+                        <span className="text-[#EF4444] font-medium">LIVE</span>
+                        {mins != null && <span>· resolves in {mins}:{String(secs).padStart(2, "0")}</span>}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative w-10 h-10">
-                      <svg viewBox="0 0 36 36" className="w-10 h-10 -rotate-90">
+                    <div className="relative w-8 h-8" title="Time remaining in this round">
+                      <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
                         <circle cx="18" cy="18" r={r} fill="none" stroke={theme === "dark" ? "#2A2A2A" : "#E2E8F0"} strokeWidth="3" />
                         <circle
                           cx="18" cy="18" r={r} fill="none"
-                          stroke={ringColor} strokeWidth="3" strokeLinecap="round"
+                          stroke={theme === "dark" ? "#CCFF00" : "#2563EB"}
+                          strokeWidth="3" strokeLinecap="round"
                           strokeDasharray={circumference}
                           strokeDashoffset={offset}
                         />
                       </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className={`text-[9px] font-bold leading-none`} style={{ color: ringColor }}>{leaningPct}%</span>
-                      </div>
                     </div>
-                    <svg className={`w-4 h-4 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className={`p-1 rounded transition-colors cursor-pointer border-none bg-transparent ${t.textMuted}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button
-                    onClick={() => router.push("/btc")}
-                    className="rounded-lg bg-green-500 hover:bg-green-400 text-black py-2.5 text-center cursor-pointer transition-colors border-none font-semibold"
-                  >
-                    <span className="text-sm">Up</span>
-                    <span className="text-xs opacity-80 ml-1.5">{Math.round(yes)}¢</span>
-                  </button>
-                  <button
-                    onClick={() => router.push("/btc")}
-                    className="rounded-lg bg-red-500 hover:bg-red-400 text-white py-2.5 text-center cursor-pointer transition-colors border-none font-semibold"
-                  >
-                    <span className="text-sm">Down</span>
-                    <span className="text-xs opacity-80 ml-1.5">{Math.round(no)}¢</span>
-                  </button>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(yes)}¢</span>
+                      <span className={`text-xs ${t.textMuted}`}>UP</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(no)}¢</span>
+                      <span className={`text-xs ${t.textMuted}`}>DOWN</span>
+                    </div>
+                  </div>
+                  <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
+                    <div className={`h-full rounded-full ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EF4444]"></span>
-                  </span>
-                  <span className="text-xs font-semibold text-[#EF4444]">LIVE</span>
-                  {mins != null && (
-                    <span className={`text-xs ${t.textMuted}`}>· resolves in {mins}:{String(secs).padStart(2, "0")}</span>
-                  )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                      theme === "dark"
+                        ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
+                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    }`}
+                  >
+                    Buy Up · {Math.round(yes)}¢
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
+                      theme === "dark"
+                        ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                        : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
+                    }`}
+                  >
+                    Buy Down · {Math.round(no)}¢
+                  </button>
                 </div>
               </div>
             );

@@ -133,7 +133,7 @@ const MARKETS = [
   },
 ];
 
-const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks"];
+const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
   const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
@@ -154,6 +154,11 @@ export default function Home() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
+  const [btcLive, setBtcLive] = useState<{
+    price_yes: number | null;
+    price_no: number | null;
+    cycle_ends_at: string | null;
+  } | null>(null);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
@@ -257,6 +262,44 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch("https://sireai.uk/pm-api/markets/btc/live", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setBtcLive({
+            price_yes: data.price_yes,
+            price_no: data.price_no,
+            cycle_ends_at: data.cycle_ends_at,
+          });
+        }
+      } catch {
+        // silently skip a failed tick -- the card just shows the last good value
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const [btcSecondsLeft, setBtcSecondsLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!btcLive?.cycle_ends_at) return;
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((new Date(btcLive.cycle_ends_at as string).getTime() - Date.now()) / 1000));
+      setBtcSecondsLeft(diff);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [btcLive?.cycle_ends_at]);
+
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans`}>
       {/* NAV */}
@@ -354,27 +397,76 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
       <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 pb-20">
         {/* LEFT */}
         <div className="flex flex-col gap-3 w-full">
-          <div
-            onClick={() => router.push("/btc")}
-            className={`relative overflow-hidden rounded-xl p-4 cursor-pointer transition-transform hover:scale-[1.01] border ${t.border} bg-gradient-to-r ${theme === "dark" ? "from-[#1A1200] to-[#111111]" : "from-orange-50 to-white"}`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5484D] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E5484D]"></span>
-                  </span>
-                  <span className="text-xs font-semibold text-[#E5484D]">LIVE · resolves every 5 min</span>
+          {(activeFilter === "All" || activeFilter === "Crypto") && (() => {
+            const yes = btcLive?.price_yes ?? 50;
+            const no = btcLive?.price_no ?? 50;
+            const leaning = yes >= no ? "Up" : "Down";
+            const leaningPct = Math.round(Math.max(yes, no));
+            const ringColor = leaning === "Up" ? "#22C55E" : "#EF4444";
+            const r = 15;
+            const circumference = 2 * Math.PI * r;
+            const offset = circumference * (1 - leaningPct / 100);
+            const mins = btcSecondsLeft != null ? Math.floor(btcSecondsLeft / 60) : null;
+            const secs = btcSecondsLeft != null ? btcSecondsLeft % 60 : null;
+
+            return (
+              <div className={`relative overflow-hidden rounded-xl p-4 border ${t.border} ${t.cardBg}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-9 h-9 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
+                    <p className={`text-sm font-bold ${t.textPrimary}`}>BTC Up or Down 5m</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="relative w-10 h-10">
+                      <svg viewBox="0 0 36 36" className="w-10 h-10 -rotate-90">
+                        <circle cx="18" cy="18" r={r} fill="none" stroke={theme === "dark" ? "#2A2A2A" : "#E2E8F0"} strokeWidth="3" />
+                        <circle
+                          cx="18" cy="18" r={r} fill="none"
+                          stroke={ringColor} strokeWidth="3" strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={offset}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`text-[9px] font-bold leading-none`} style={{ color: ringColor }}>{leaningPct}%</span>
+                      </div>
+                    </div>
+                    <svg className={`w-4 h-4 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </div>
                 </div>
-                <p className={`text-sm font-medium ${t.textPrimary}`}>Will BTC be up in the next 5 minutes?</p>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    onClick={() => router.push("/btc")}
+                    className="rounded-lg bg-green-500 hover:bg-green-400 text-black py-2.5 text-center cursor-pointer transition-colors border-none font-semibold"
+                  >
+                    <span className="text-sm">Up</span>
+                    <span className="text-xs opacity-80 ml-1.5">{Math.round(yes)}¢</span>
+                  </button>
+                  <button
+                    onClick={() => router.push("/btc")}
+                    className="rounded-lg bg-red-500 hover:bg-red-400 text-white py-2.5 text-center cursor-pointer transition-colors border-none font-semibold"
+                  >
+                    <span className="text-sm">Down</span>
+                    <span className="text-xs opacity-80 ml-1.5">{Math.round(no)}¢</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EF4444]"></span>
+                  </span>
+                  <span className="text-xs font-semibold text-[#EF4444]">LIVE</span>
+                  {mins != null && (
+                    <span className={`text-xs ${t.textMuted}`}>· resolves in {mins}:{String(secs).padStart(2, "0")}</span>
+                  )}
+                </div>
               </div>
-              <svg className={`w-4 h-4 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
+            );
+          })()}
 
           {filtered.map((market, i) => (
             <div

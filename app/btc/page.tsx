@@ -98,7 +98,7 @@ export default function BtcLive() {
 
   const isUp = live?.open_price_usd != null && live.current_price_usd > live.open_price_usd;
   const isDown = live?.open_price_usd != null && live.current_price_usd < live.open_price_usd;
-  const lineColor = isUp ? "#10B981" : isDown ? "#E5484D" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+  const lineColor = isUp ? "#22C55E" : isDown ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
 
   // Angle is based on the trend over the last ~18s (6 ticks at 3s/poll),
   // not just the last two ticks -- a single 3s tick is often just a few
@@ -166,15 +166,15 @@ export default function BtcLive() {
           </div>
           <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${theme === "dark" ? "bg-[#1A1A1A] text-white" : "bg-slate-100 text-slate-700"}`}>
             <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5484D] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#E5484D]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#EF4444]"></span>
             </span>
             Live
           </span>
         </div>
 
         {error && (
-          <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${theme === "dark" ? "bg-[#3B1B1B] text-[#E5484D]" : "bg-red-50 text-red-600"}`}>
+          <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${theme === "dark" ? "bg-[#3B1B1B] text-[#EF4444]" : "bg-red-50 text-red-600"}`}>
             {error}
           </div>
         )}
@@ -191,7 +191,7 @@ export default function BtcLive() {
             <div className={`text-xs ${t.textMuted} mb-1`}>Current Price</div>
             <div className="flex items-center gap-1.5 justify-end">
               {live?.open_price_usd != null && (
-                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-emerald-500" : isDown ? "text-[#E5484D]" : t.textMuted}`}>
+                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-green-400" : isDown ? "text-[#EF4444]" : t.textMuted}`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={isDown ? "M19 14l-7 7m0 0l-7-7m7 7V3" : "M5 10l7-7m0 0l7 7m-7-7v18"} />
                   </svg>
@@ -207,7 +207,7 @@ export default function BtcLive() {
 
         {secondsLeft != null && (
           <div className={`text-xs ${t.textMuted} mb-2 text-right`}>
-            Resolves in <span className={`font-mono font-semibold ${secondsLeft <= 30 ? "text-[#E5484D]" : t.textPrimary}`}>{mins}:{String(secs).padStart(2, "0")}</span>
+            Resolves in <span className={`font-mono font-semibold ${secondsLeft <= 30 ? "text-[#EF4444]" : t.textPrimary}`}>{mins}:{String(secs).padStart(2, "0")}</span>
           </div>
         )}
 
@@ -298,17 +298,17 @@ export default function BtcLive() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button
               onClick={() => { if (!isLoggedIn) router.push("/?auth=1"); }}
-              className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 py-3 text-center cursor-pointer transition-colors hover:bg-emerald-500/25"
+              className="rounded-xl bg-green-500 hover:bg-green-400 text-black py-3 text-center cursor-pointer transition-colors border-none font-semibold"
             >
-              <div className="text-xs text-emerald-500 font-medium mb-0.5">UP (YES)</div>
-              <div className="text-lg font-bold text-emerald-500">{live.price_yes.toFixed(0)}¢</div>
+              <div className="text-xs opacity-80 mb-0.5">UP (YES)</div>
+              <div className="text-lg font-bold">{live.price_yes.toFixed(0)}¢</div>
             </button>
             <button
               onClick={() => { if (!isLoggedIn) router.push("/?auth=1"); }}
-              className="rounded-xl bg-[#E5484D]/15 border border-[#E5484D]/30 py-3 text-center cursor-pointer transition-colors hover:bg-[#E5484D]/25"
+              className="rounded-xl bg-red-500 hover:bg-red-400 text-white py-3 text-center cursor-pointer transition-colors border-none font-semibold"
             >
-              <div className="text-xs text-[#E5484D] font-medium mb-0.5">DOWN (NO)</div>
-              <div className="text-lg font-bold text-[#E5484D]">{live.price_no.toFixed(0)}¢</div>
+              <div className="text-xs opacity-80 mb-0.5">DOWN (NO)</div>
+              <div className="text-lg font-bold">{live.price_no.toFixed(0)}¢</div>
             </button>
           </div>
         )}

@@ -1,0 +1,201 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useTheme } from "../context/theme";
+import { useEffect, useRef, useState } from "react";
+import { LineChart, Line, ReferenceLine, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+
+const API_BASE = "https://sireai.uk/pm-api";
+const POLL_MS = 3000;
+const MAX_POINTS = 150; // ~7.5 minutes of history at 3s ticks
+
+type LiveData = {
+  market_id: string | null;
+  question: string | null;
+  open_price_usd: number | null;
+  cycle_ends_at: string | null;
+  price_yes: number | null;
+  price_no: number | null;
+  current_price_usd: number;
+};
+
+type Point = { t: number; price: number };
+
+export default function BtcLive() {
+  const { theme, toggleTheme, t, isLoggedIn } = useTheme();
+  const router = useRouter();
+
+  const [live, setLive] = useState<LiveData | null>(null);
+  const [history, setHistory] = useState<Point[]>([]);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/markets/btc/live`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data: LiveData = await res.json();
+        setLive(data);
+        setError(null);
+        setHistory((prev) => {
+          const next = [...prev, { t: Date.now(), price: data.current_price_usd }];
+          return next.length > MAX_POINTS ? next.slice(next.length - MAX_POINTS) : next;
+        });
+      } catch {
+        setError("Can't reach the live price feed right now.");
+      }
+    };
+
+    poll();
+    pollRef.current = setInterval(poll, POLL_MS);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!live?.cycle_ends_at) {
+      const id = requestAnimationFrame(() => setSecondsLeft(null));
+      return () => cancelAnimationFrame(id);
+    }
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((new Date(live.cycle_ends_at as string).getTime() - Date.now()) / 1000));
+      setSecondsLeft(diff);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [live?.cycle_ends_at]);
+
+  const isUp = live?.open_price_usd != null && live.current_price_usd > live.open_price_usd;
+  const isDown = live?.open_price_usd != null && live.current_price_usd < live.open_price_usd;
+  const lineColor = isUp ? "#10B981" : isDown ? "#E5484D" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+
+  const mins = secondsLeft != null ? Math.floor(secondsLeft / 60) : null;
+  const secs = secondsLeft != null ? secondsLeft % 60 : null;
+
+  return (
+    <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-20`}>
+      {/* NAV */}
+      <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm`}>
+        <div className="flex items-center justify-between px-3 md:px-6 h-12">
+          <div onClick={() => router.push("/")} className="flex items-center gap-1.5 cursor-pointer">
+            <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
+            <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className={`w-8 h-8 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg} transition-colors`}
+          >
+            {theme === "light" ? (
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      <div className="max-w-2xl mx-auto px-3 md:px-6 py-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-6 h-6 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-xs font-bold shrink-0">₿</span>
+          <h1 className={`text-lg font-bold ${t.textPrimary}`}>
+            {live?.question ?? "Will BTC be up in the next 5 minutes?"}
+          </h1>
+        </div>
+
+        {error && (
+          <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${theme === "dark" ? "bg-[#3B1B1B] text-[#E5484D]" : "bg-red-50 text-red-600"}`}>
+            {error}
+          </div>
+        )}
+
+        {/* PRICE + COUNTDOWN */}
+        <div className="flex items-end justify-between mb-4">
+          <div>
+            <div className={`text-3xl font-bold ${isUp ? "text-emerald-500" : isDown ? "text-[#E5484D]" : t.textPrimary}`}>
+              ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+            </div>
+            {live?.open_price_usd != null && (
+              <div className={`text-xs ${t.textMuted}`}>
+                Open: ${live.open_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </div>
+            )}
+          </div>
+          {secondsLeft != null && (
+            <div className="text-right">
+              <div className={`text-xs ${t.textMuted} mb-0.5`}>Resolves in</div>
+              <div className={`text-xl font-mono font-bold ${secondsLeft <= 30 ? "text-[#E5484D]" : t.textPrimary}`}>
+                {mins}:{String(secs).padStart(2, "0")}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* LIVE CHART */}
+        <div className={`rounded-2xl border ${t.border} ${t.cardBg} p-3 mb-4`} style={{ height: 260 }}>
+          {history.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <XAxis dataKey="t" hide />
+                <YAxis domain={["dataMin - 5", "dataMax + 5"]} hide />
+                <Tooltip
+                  formatter={(value) => [`$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "BTC"]}
+                  labelFormatter={(label) => new Date(Number(label)).toLocaleTimeString()}
+                  contentStyle={{
+                    background: theme === "dark" ? "#111111" : "#FFFFFF",
+                    border: `1px solid ${theme === "dark" ? "#2A2A2A" : "#E2E8F0"}`,
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                {live?.open_price_usd != null && (
+                  <ReferenceLine
+                    y={live.open_price_usd}
+                    stroke={theme === "dark" ? "#666666" : "#94A3B8"}
+                    strokeDasharray="4 4"
+                  />
+                )}
+                <Line type="monotone" dataKey="price" stroke={lineColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>
+              Loading live price…
+            </div>
+          )}
+        </div>
+
+        {/* ODDS */}
+        {live?.price_yes != null && live?.price_no != null && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <button
+              onClick={() => { if (!isLoggedIn) router.push("/?auth=1"); }}
+              className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 py-3 text-center cursor-pointer transition-colors hover:bg-emerald-500/25"
+            >
+              <div className="text-xs text-emerald-500 font-medium mb-0.5">UP (YES)</div>
+              <div className="text-lg font-bold text-emerald-500">{live.price_yes.toFixed(0)}¢</div>
+            </button>
+            <button
+              onClick={() => { if (!isLoggedIn) router.push("/?auth=1"); }}
+              className="rounded-xl bg-[#E5484D]/15 border border-[#E5484D]/30 py-3 text-center cursor-pointer transition-colors hover:bg-[#E5484D]/25"
+            >
+              <div className="text-xs text-[#E5484D] font-medium mb-0.5">DOWN (NO)</div>
+              <div className="text-lg font-bold text-[#E5484D]">{live.price_no.toFixed(0)}¢</div>
+            </button>
+          </div>
+        )}
+
+        <p className={`text-xs ${t.textMuted}`}>
+          A new 5-minute market starts automatically the moment this one resolves. Odds move as people trade YES/NO — the dashed line marks the price this round opened at.
+        </p>
+      </div>
+    </div>
+  );
+}

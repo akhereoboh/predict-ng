@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/theme";
 import { useEffect, useRef, useState } from "react";
-import { LineChart, Line, ReferenceLine, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { LineChart, Line, ReferenceLine, ReferenceDot, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 const API_BASE = "https://sireai.uk/pm-api";
 const POLL_MS = 3000;
@@ -20,6 +20,31 @@ type LiveData = {
 };
 
 type Point = { t: number; price: number };
+
+type ArrowHeadProps = {
+  cx?: number;
+  cy?: number;
+  color: string;
+  bgColor: string;
+};
+
+function ArrowHead({ cx, cy, color, bgColor }: ArrowHeadProps) {
+  if (cx == null || cy == null) return null;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={9} fill={color} opacity={0.22}>
+        <animate attributeName="r" values="7;12;7" dur="1.6s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+      </circle>
+      <path
+        d={`M ${cx - 5} ${cy - 5} L ${cx + 7} ${cy} L ${cx - 5} ${cy + 5} Z`}
+        fill={color}
+        stroke={bgColor}
+        strokeWidth={1.2}
+      />
+    </g>
+  );
+}
 
 export default function BtcLive() {
   const { theme, toggleTheme, t, isLoggedIn } = useTheme();
@@ -119,7 +144,7 @@ export default function BtcLive() {
         {/* PRICE + COUNTDOWN */}
         <div className="flex items-end justify-between mb-4">
           <div>
-            <div className={`text-3xl font-bold ${isUp ? "text-emerald-500" : isDown ? "text-[#E5484D]" : t.textPrimary}`}>
+            <div className={`text-3xl font-bold ${t.textPrimary}`}>
               ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
             </div>
             {live?.open_price_usd != null && (
@@ -139,12 +164,25 @@ export default function BtcLive() {
         </div>
 
         {/* LIVE CHART */}
-        <div className={`rounded-2xl border ${t.border} ${t.cardBg} p-3 mb-4`} style={{ height: 260 }}>
+        <div className={`rounded-2xl border ${t.border} ${t.cardBg} p-3 mb-4`} style={{ height: 280 }}>
           {history.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history}>
+              <LineChart data={history} margin={{ top: 16, right: 56, left: 0, bottom: 0 }}>
+                <CartesianGrid
+                  horizontal
+                  vertical={false}
+                  stroke={theme === "dark" ? "#1E1E1E" : "#EEF2F6"}
+                />
                 <XAxis dataKey="t" hide />
-                <YAxis domain={["dataMin - 5", "dataMax + 5"]} hide />
+                <YAxis
+                  orientation="right"
+                  domain={["dataMin - 20", "dataMax + 20"]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
+                  tickFormatter={(v) => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                  width={56}
+                />
                 <Tooltip
                   formatter={(value) => [`$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "BTC"]}
                   labelFormatter={(label) => new Date(Number(label)).toLocaleTimeString()}
@@ -160,9 +198,37 @@ export default function BtcLive() {
                     y={live.open_price_usd}
                     stroke={theme === "dark" ? "#666666" : "#94A3B8"}
                     strokeDasharray="4 4"
+                    label={{
+                      value: "open",
+                      position: "insideLeft",
+                      fill: theme === "dark" ? "#888888" : "#94A3B8",
+                      fontSize: 10,
+                    }}
+                  />
+                )}
+                {live?.current_price_usd != null && (
+                  <ReferenceLine
+                    y={live.current_price_usd}
+                    stroke="#CCFF00"
+                    strokeWidth={1}
+                    label={{
+                      value: `$${live.current_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+                      position: "right",
+                      fill: "#CCFF00",
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
                   />
                 )}
                 <Line type="monotone" dataKey="price" stroke={lineColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+                <ReferenceDot
+                  x={history[history.length - 1].t}
+                  y={history[history.length - 1].price}
+                  r={0}
+                  shape={(props: { cx?: number; cy?: number }) => (
+                    <ArrowHead cx={props.cx} cy={props.cy} color={lineColor} bgColor={theme === "dark" ? "#111111" : "#FFFFFF"} />
+                  )}
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (

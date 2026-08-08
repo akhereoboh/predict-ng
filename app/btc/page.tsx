@@ -26,9 +26,10 @@ type ArrowHeadProps = {
   cy?: number;
   color: string;
   bgColor: string;
+  angle: number;
 };
 
-function ArrowHead({ cx, cy, color, bgColor }: ArrowHeadProps) {
+function ArrowHead({ cx, cy, color, bgColor, angle }: ArrowHeadProps) {
   if (cx == null || cy == null) return null;
   return (
     <g>
@@ -41,6 +42,7 @@ function ArrowHead({ cx, cy, color, bgColor }: ArrowHeadProps) {
         fill={color}
         stroke={bgColor}
         strokeWidth={1.2}
+        transform={`rotate(${angle} ${cx} ${cy})`}
       />
     </g>
   );
@@ -97,6 +99,22 @@ export default function BtcLive() {
   const isUp = live?.open_price_usd != null && live.current_price_usd > live.open_price_usd;
   const isDown = live?.open_price_usd != null && live.current_price_usd < live.open_price_usd;
   const lineColor = isUp ? "#10B981" : isDown ? "#E5484D" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+
+  // Angle is based on the trend over the last ~18s (6 ticks at 3s/poll),
+  // not just the last two ticks -- a single 3s tick is often just a few
+  // cents of real BTC movement, which made the old version flicker between
+  // fixed angles almost randomly. Magnitude is continuous and proportional
+  // to how steep the recent move actually was, clamped so a huge spike
+  // doesn't pin it past vertical.
+  const arrowAngle = (() => {
+    const WINDOW = 6;
+    if (history.length < 2) return 0;
+    const recent = history.slice(-WINDOW);
+    const delta = recent[recent.length - 1].price - recent[0].price;
+    const maxDelta = 6; // dollars -- tune this to make swings feel more/less dramatic
+    const clamped = Math.max(-maxDelta, Math.min(maxDelta, delta));
+    return -(clamped / maxDelta) * 45; // price rising -> arrow tilts up (negative deg)
+  })();
 
   const mins = secondsLeft != null ? Math.floor(secondsLeft / 60) : null;
   const secs = secondsLeft != null ? secondsLeft % 60 : null;
@@ -257,7 +275,13 @@ export default function BtcLive() {
                   y={history[history.length - 1].price}
                   r={0}
                   shape={(props: { cx?: number; cy?: number }) => (
-                    <ArrowHead cx={props.cx} cy={props.cy} color={lineColor} bgColor={theme === "dark" ? "#111111" : "#FFFFFF"} />
+                    <ArrowHead
+                      cx={props.cx}
+                      cy={props.cy}
+                      color={lineColor}
+                      bgColor={theme === "dark" ? "#111111" : "#FFFFFF"}
+                      angle={arrowAngle}
+                    />
                   )}
                 />
               </LineChart>

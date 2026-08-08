@@ -158,6 +158,8 @@ export default function Home() {
     price_yes: number | null;
     price_no: number | null;
     cycle_ends_at: string | null;
+    volume_naira: number | null;
+    trader_count: number | null;
   } | null>(null);
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -274,6 +276,8 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             price_yes: data.price_yes,
             price_no: data.price_no,
             cycle_ends_at: data.cycle_ends_at,
+            volume_naira: data.volume_naira,
+            trader_count: data.trader_count,
           });
         }
       } catch {
@@ -403,9 +407,12 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             const mins = btcSecondsLeft != null ? Math.floor(btcSecondsLeft / 60) : null;
             const secs = btcSecondsLeft != null ? btcSecondsLeft % 60 : null;
             const pctElapsed = btcSecondsLeft != null ? Math.round(((300 - btcSecondsLeft) / 300) * 100) : 0;
+            const pctRemaining = 100 - pctElapsed;
             const r = 15;
             const circumference = 2 * Math.PI * r;
             const offset = circumference * (1 - pctElapsed / 100);
+            const vol = btcLive?.volume_naira ?? 0;
+            const traders = btcLive?.trader_count ?? 0;
 
             return (
               <div
@@ -417,6 +424,9 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                     <span className="w-8 h-8 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
                     <div>
                       <p className={`text-sm font-medium leading-snug ${t.textPrimary}`}>BTC Up or Down 5m</p>
+                      <p className={`text-xs ${t.textMuted} mt-0.5`}>
+                        ₦{vol.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {traders} trader{traders === 1 ? "" : "s"}
+                      </p>
                       <p className={`text-xs ${t.textMuted} mt-0.5 flex items-center gap-1.5`}>
                         <span className="relative flex h-1.5 w-1.5 shrink-0">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>
@@ -428,8 +438,8 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative w-8 h-8" title="Time remaining in this round">
-                      <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
+                    <div className="relative w-9 h-9" title={`${pctRemaining}% of this round remains`}>
+                      <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
                         <circle cx="18" cy="18" r={r} fill="none" stroke={theme === "dark" ? "#2A2A2A" : "#E2E8F0"} strokeWidth="3" />
                         <circle
                           cx="18" cy="18" r={r} fill="none"
@@ -439,6 +449,9 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                           strokeDashoffset={offset}
                         />
                       </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className={`text-[9px] font-bold ${t.textPrimary}`}>{pctRemaining}%</span>
+                      </div>
                     </div>
                     <button
                       onClick={(e) => e.stopPropagation()}

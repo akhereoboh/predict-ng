@@ -179,7 +179,7 @@ export default function BtcLive() {
           </div>
         )}
 
-        {/* PRICE TO BEAT + FINAL PRICE */}
+        {/* PRICE TO BEAT + CURRENT PRICE */}
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className={`text-xs ${t.textMuted} mb-1`}>Price To Beat</div>
@@ -188,7 +188,7 @@ export default function BtcLive() {
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-xs ${t.textMuted} mb-1`}>Final Price</div>
+            <div className={`text-xs ${t.textMuted} mb-1`}>Current Price</div>
             <div className="flex items-center gap-1.5 justify-end">
               {live?.open_price_usd != null && (
                 <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-emerald-500" : isDown ? "text-[#E5484D]" : t.textMuted}`}>

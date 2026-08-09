@@ -3,11 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/theme";
 import { useEffect, useRef, useState } from "react";
-import { LineChart, Line, ReferenceLine, ReferenceDot, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { createChart, ColorType, LineSeries, LineStyle, type IChartApi, type ISeriesApi, type IPriceLine, type UTCTimestamp } from "lightweight-charts";
 
 const API_BASE = "https://sireai.uk/pm-api";
 const POLL_MS = 3000;
-const MAX_POINTS = 150; // ~7.5 minutes of history at 3s ticks
 
 type TradeRecord = {
   id: number;
@@ -30,41 +29,11 @@ type LiveData = {
   recent_trades: TradeRecord[];
 };
 
-type Point = { t: number; price: number };
-
-type ArrowHeadProps = {
-  cx?: number;
-  cy?: number;
-  color: string;
-  bgColor: string;
-  angle: number;
-};
-
-function ArrowHead({ cx, cy, color, bgColor, angle }: ArrowHeadProps) {
-  if (cx == null || cy == null) return null;
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={9} fill={color} opacity={0.22}>
-        <animate attributeName="r" values="7;12;7" dur="1.6s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
-      </circle>
-      <path
-        d={`M ${cx - 5} ${cy - 5} L ${cx + 7} ${cy} L ${cx - 5} ${cy + 5} Z`}
-        fill={color}
-        stroke={bgColor}
-        strokeWidth={1.2}
-        transform={`rotate(${angle} ${cx} ${cy})`}
-      />
-    </g>
-  );
-}
-
 export default function BtcLive() {
   const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
   const router = useRouter();
 
   const [live, setLive] = useState<LiveData | null>(null);
-  const [history, setHistory] = useState<Point[]>([]);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -84,19 +53,100 @@ export default function BtcLive() {
   const [tradeBubbles, setTradeBubbles] = useState<{ id: number; outcome: "YES" | "NO"; amountNaira: number; x: number }[]>([]);
   const seenTradeIds = useRef<Set<number> | null>(null);
 
-  // Drives continuous, free-flowing motion instead of the chart only
-  // updating once every POLL_MS when real data arrives. recharts redraws
-  // its entire SVG tree (every gridline, tick, and the full line path) on
-  // each update, so a true 60fps loop can actually cause stutter rather
-  // than fix it -- the render work competes with the browser's paint
-  // budget every single frame. ~12 updates/sec is dramatically smoother
-  // than the old 3000ms ticks while staying inside a realistic render
-  // budget for a full SVG-based chart library.
-  const [frameNow, setFrameNow] = useState<number>(() => Date.now());
+  // Chart refs -- lightweight-charts (TradingView's canvas-based charting
+  // library) instead of recharts. recharts redraws its entire SVG tree
+  // (every gridline, tick, and the full line path) on each update, which
+  // is what caused the choppy motion, jittery tick labels, and sudden
+  // rescale "jumps" we kept fighting. lightweight-charts is purpose-built
+  // for exactly this -- live tick-updating financial charts -- and handles
+  // smooth interpolation, the sliding time axis, and the "last value"
+  // marker/label natively, so almost none of that needs to be hand-built
+  // anymore.
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartApiRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const openPriceLineRef = useRef<IPriceLine | null>(null);
+  const lastMarketIdRef = useRef<string | null>(null);
+  const [chartReady, setChartReady] = useState(false);
+
+  // Create the chart once on mount.
   useEffect(() => {
-    const id = setInterval(() => setFrameNow(Date.now()), 80);
-    return () => clearInterval(id);
+    if (!chartContainerRef.current) return;
+
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 280,
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: theme === "dark" ? "#666666" : "#94A3B8",
+        fontSize: 10,
+      },
+      grid: {
+        horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
+        vertLines: { visible: false },
+      },
+      rightPriceScale: { borderVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: true,
+        // A ~30s visible window, matching "5-6 timestamps visible, ticking
+        // every few seconds" -- lightweight-charts handles the actual
+        // sliding/scrolling natively, so this is just how much history
+        // it keeps in view at once.
+        barSpacing: 14,
+      },
+      crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
+      handleScroll: false,
+      handleScale: false,
+    });
+
+    const series = chart.addSeries(LineSeries, {
+      color: theme === "dark" ? "#CCFF00" : "#3B82F6",
+      lineWidth: 2,
+      // Native "last value" dashed line + label -- this replaces the
+      // custom lime ReferenceLine we were hand-building with recharts.
+      priceLineVisible: true,
+      priceLineColor: "#CCFF00",
+      priceLineWidth: 1,
+      priceLineStyle: LineStyle.Dashed,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+    });
+
+    chartApiRef.current = chart;
+    seriesRef.current = series;
+    setChartReady(true);
+
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      }
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      chart.remove();
+      chartApiRef.current = null;
+      seriesRef.current = null;
+      openPriceLineRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-theme the chart when dark/light mode toggles.
+  useEffect(() => {
+    if (!chartApiRef.current || !seriesRef.current) return;
+    chartApiRef.current.applyOptions({
+      layout: {
+        textColor: theme === "dark" ? "#666666" : "#94A3B8",
+      },
+      grid: {
+        horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
+      },
+    });
+  }, [theme, chartReady]);
 
   useEffect(() => {
     const poll = async () => {
@@ -106,10 +156,39 @@ export default function BtcLive() {
         const data: LiveData = await res.json();
         setLive(data);
         setError(null);
-        setHistory((prev) => {
-          const next = [...prev, { t: Date.now(), price: data.current_price_usd }];
-          return next.length > MAX_POINTS ? next.slice(next.length - MAX_POINTS) : next;
-        });
+
+        // Push straight into the chart -- lightweight-charts' own update()
+        // handles the smooth transition and the sliding time axis natively,
+        // no manual interpolation or React re-render needed for this part.
+        if (seriesRef.current) {
+          seriesRef.current.update({
+            time: Math.floor(Date.now() / 1000) as UTCTimestamp,
+            value: data.current_price_usd,
+          });
+
+          const isUpNow = data.open_price_usd != null && data.current_price_usd > data.open_price_usd;
+          const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
+          const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+          seriesRef.current.applyOptions({ color: nowColor });
+
+          // Recreate the "open" reference line only when the round actually
+          // changes (a new market_id) -- not every poll, since the open
+          // price is fixed for the whole round.
+          if (data.market_id && data.market_id !== lastMarketIdRef.current && data.open_price_usd != null) {
+            lastMarketIdRef.current = data.market_id;
+            if (openPriceLineRef.current) {
+              seriesRef.current.removePriceLine(openPriceLineRef.current);
+            }
+            openPriceLineRef.current = seriesRef.current.createPriceLine({
+              price: data.open_price_usd,
+              color: theme === "dark" ? "#666666" : "#94A3B8",
+              lineWidth: 1,
+              lineStyle: LineStyle.Dashed,
+              axisLabelVisible: true,
+              title: "open",
+            });
+          }
+        }
 
         // Only animate trades that are genuinely NEW since the last poll --
         // real buys/sells from real users, never simulated. The first poll
@@ -141,7 +220,7 @@ export default function BtcLive() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     if (!live?.cycle_ends_at) {
@@ -159,17 +238,6 @@ export default function BtcLive() {
 
   const isUp = live?.open_price_usd != null && live.current_price_usd > live.open_price_usd;
   const isDown = live?.open_price_usd != null && live.current_price_usd < live.open_price_usd;
-  const lineColor = isUp ? "#22C55E" : isDown ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
-
-  const arrowAngle = (() => {
-    const WINDOW = 6;
-    if (history.length < 2) return 0;
-    const recent = history.slice(-WINDOW);
-    const delta = recent[recent.length - 1].price - recent[0].price;
-    const maxDelta = 6;
-    const clamped = Math.max(-maxDelta, Math.min(maxDelta, delta));
-    return -(clamped / maxDelta) * 45;
-  })();
 
   const mins = secondsLeft != null ? Math.floor(secondsLeft / 60) : null;
   const secs = secondsLeft != null ? secondsLeft % 60 : null;
@@ -288,137 +356,10 @@ export default function BtcLive() {
                 +₦{b.amountNaira}
               </span>
             ))}
-            {history.length > 1 ? (() => {
-              // Sliding time window -- domain is always [windowStart, frameNow],
-              // recalculated continuously. windowStart is clamped to the
-              // EARLIEST real point we actually have -- without this, a fresh
-              // page load (or reload) would show a mostly-empty window that
-              // visibly "fills in" over time. Instead the chart fills its full
-              // width immediately with whatever data exists, and only becomes
-              // a true sliding window once enough history has accumulated.
-              const WINDOW_MS = 30_000; // ~5-6 labels visible at TICK_INTERVAL_MS spacing
-              const earliestT = history[0].t;
-              const windowStart = Math.max(frameNow - WINDOW_MS, earliestT);
-              const xDomain: [number, number] = [windowStart, frameNow];
-
-              // The actual bug behind "the motion feels wrong": recharts was
-              // auto-generating its OWN tick positions fresh on every render,
-              // picking different "nice round numbers" each time the domain
-              // shifted. That means labels weren't sliding at all -- they were
-              // being silently swapped for different values every update,
-              // which reads as jittery rather than a smooth scroll. Fixing
-              // this means computing our own fixed, clock-aligned tick
-              // timestamps explicitly, so each label has a stable identity
-              // that genuinely glides left and exits, rather than being
-              // regenerated from scratch each frame.
-              const TICK_INTERVAL_MS = 5_000;
-              const firstTick = Math.ceil(windowStart / TICK_INTERVAL_MS) * TICK_INTERVAL_MS;
-              const xTicks: number[] = [];
-              for (let tk = firstTick; tk <= frameNow; tk += TICK_INTERVAL_MS) xTicks.push(tk);
-
-              // Free-flowing motion: real data only arrives every POLL_MS, so
-              // instead of the line/arrow jumping to each new point, we smoothly
-              // interpolate between the last two REAL points based on how far
-              // through the current poll interval we are. This deliberately
-              // trails the true latest value by up to one poll interval -- the
-              // "slightly backwards" lag -- in exchange for genuinely fluid motion
-              // rather than visible ticks.
-              const lastReal = history[history.length - 1];
-              const prevReal = history.length > 1 ? history[history.length - 2] : lastReal;
-              const frac = Math.min(1, Math.max(0, (frameNow - lastReal.t) / POLL_MS));
-              const smoothPrice = prevReal.price + (lastReal.price - prevReal.price) * frac;
-              const chartData = [...history, { t: frameNow, price: smoothPrice }];
-
-              // Adaptive Y range -- when open/current price are close together,
-              // a fixed pixel-padding makes the line look almost flat. Instead,
-              // enforce a minimum visual span so small real moves still read
-              // as a clear, dramatic line -- same trick real trading charts use.
-              // Kept tight ($12) since BTC often only moves a few dollars within
-              // a single 5-minute round -- a looser floor makes even a real,
-              // meaningful move look flat.
-              const prices = history.map((p) => p.price);
-              if (live?.open_price_usd != null) prices.push(live.open_price_usd);
-              const dataMin = Math.min(...prices);
-              const dataMax = Math.max(...prices);
-              const range = dataMax - dataMin;
-              const MIN_SPAN = 12; // dollars
-              const center = (dataMin + dataMax) / 2;
-              const yDomain: [number, number] =
-                range < MIN_SPAN
-                  ? [center - MIN_SPAN / 2, center + MIN_SPAN / 2]
-                  : [dataMin - range * 0.15, dataMax + range * 0.15];
-
-              return (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 16, right: 56, left: 0, bottom: 8 }}>
-                  <CartesianGrid horizontal vertical={false} stroke={theme === "dark" ? "#1E1E1E" : "#EEF2F6"} />
-                  <XAxis
-                    dataKey="t"
-                    type="number"
-                    domain={xDomain}
-                    ticks={xTicks}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
-                    tickFormatter={(t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}
-                  />
-                  <YAxis
-                    orientation="right"
-                    domain={yDomain}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
-                    tickFormatter={(v) => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    width={56}
-                  />
-                  <Tooltip
-                    formatter={(value) => [`$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "BTC"]}
-                    labelFormatter={(label) => new Date(Number(label)).toLocaleTimeString()}
-                    contentStyle={{
-                      background: theme === "dark" ? "#111111" : "#FFFFFF",
-                      border: `1px solid ${theme === "dark" ? "#2A2A2A" : "#E2E8F0"}`,
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  {live?.open_price_usd != null && (
-                    <ReferenceLine
-                      y={live.open_price_usd}
-                      stroke={theme === "dark" ? "#666666" : "#94A3B8"}
-                      strokeDasharray="4 4"
-                      label={{ value: "open", position: "insideLeft", fill: theme === "dark" ? "#888888" : "#94A3B8", fontSize: 10 }}
-                    />
-                  )}
-                  {live?.current_price_usd != null && (
-                    <ReferenceLine
-                      y={live.current_price_usd}
-                      stroke="#CCFF00"
-                      strokeWidth={1}
-                      strokeDasharray="4 4"
-                      label={{
-                        value: `$${live.current_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-                        position: "right",
-                        fill: "#CCFF00",
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}
-                    />
-                  )}
-                  <Line type="monotone" dataKey="price" stroke={lineColor} strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <ReferenceDot
-                    x={frameNow}
-                    y={smoothPrice}
-                    r={0}
-                    shape={(props: { cx?: number; cy?: number }) => (
-                      <ArrowHead cx={props.cx} cy={props.cy} color={lineColor} bgColor={theme === "dark" ? "#111111" : "#FFFFFF"} angle={arrowAngle} />
-                    )}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              );
-            })() : (
-              <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading live price…</div>
+            {!chartReady && (
+              <div className={`absolute inset-0 flex items-center justify-center text-sm ${t.textMuted}`}>Loading live price…</div>
             )}
+            <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className={`flex items-center gap-3 text-xs ${t.textMuted}`}>

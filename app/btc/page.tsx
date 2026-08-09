@@ -290,18 +290,31 @@ export default function BtcLive() {
             ))}
             {history.length > 1 ? (() => {
               // Sliding time window -- domain is always [windowStart, frameNow],
-              // recalculated continuously. This creates the "time flowing left"
-              // illusion: the window glides forward instead of jumping every 3s.
-              // windowStart is clamped to the EARLIEST real point we actually
-              // have -- without this, a fresh page load (or reload) would show
-              // a mostly-empty 90-second window that visibly "fills in" over
-              // the next minute and a half. Instead the chart fills its full
+              // recalculated continuously. windowStart is clamped to the
+              // EARLIEST real point we actually have -- without this, a fresh
+              // page load (or reload) would show a mostly-empty window that
+              // visibly "fills in" over time. Instead the chart fills its full
               // width immediately with whatever data exists, and only becomes
               // a true sliding window once enough history has accumulated.
-              const WINDOW_MS = 90_000;
+              const WINDOW_MS = 30_000; // ~5-6 labels visible at TICK_INTERVAL_MS spacing
               const earliestT = history[0].t;
               const windowStart = Math.max(frameNow - WINDOW_MS, earliestT);
               const xDomain: [number, number] = [windowStart, frameNow];
+
+              // The actual bug behind "the motion feels wrong": recharts was
+              // auto-generating its OWN tick positions fresh on every render,
+              // picking different "nice round numbers" each time the domain
+              // shifted. That means labels weren't sliding at all -- they were
+              // being silently swapped for different values every update,
+              // which reads as jittery rather than a smooth scroll. Fixing
+              // this means computing our own fixed, clock-aligned tick
+              // timestamps explicitly, so each label has a stable identity
+              // that genuinely glides left and exits, rather than being
+              // regenerated from scratch each frame.
+              const TICK_INTERVAL_MS = 5_000;
+              const firstTick = Math.ceil(windowStart / TICK_INTERVAL_MS) * TICK_INTERVAL_MS;
+              const xTicks: number[] = [];
+              for (let tk = firstTick; tk <= frameNow; tk += TICK_INTERVAL_MS) xTicks.push(tk);
 
               // Free-flowing motion: real data only arrives every POLL_MS, so
               // instead of the line/arrow jumping to each new point, we smoothly
@@ -343,11 +356,11 @@ export default function BtcLive() {
                     dataKey="t"
                     type="number"
                     domain={xDomain}
+                    ticks={xTicks}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: theme === "dark" ? "#555555" : "#94A3B8" }}
                     tickFormatter={(t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}
-                    minTickGap={50}
                   />
                   <YAxis
                     orientation="right"

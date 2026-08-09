@@ -100,11 +100,13 @@ export default function BtcLive() {
         borderVisible: false,
         timeVisible: true,
         secondsVisible: true,
-        // A ~30s visible window, matching "5-6 timestamps visible, ticking
-        // every few seconds" -- lightweight-charts handles the actual
-        // sliding/scrolling natively, so this is just how much history
-        // it keeps in view at once.
-        barSpacing: 14,
+        // The glide loop below creates a new bar ~15x/sec now (fractional
+        // timestamps), not 1x/sec like before -- so barSpacing has to
+        // shrink roughly proportionally, or the chart scrolls ~15x faster
+        // than intended even though nothing about the real data changed.
+        // 14 was calibrated for 1 bar/sec; ~1 keeps the same overall pace
+        // at ~15 bars/sec while still looking smooth rather than stepped.
+        barSpacing: 1,
       },
       crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
       handleScroll: false,

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, LineSeries, LineStyle, type IChartApi, type ISeriesApi, type IPriceLine, type UTCTimestamp } from "lightweight-charts";
 
 const API_BASE = "https://sireai.uk/pm-api";
-const POLL_MS = 3000;
+const POLL_MS = 1000; // matches btc_stream.py's UPDATE_INTERVAL_SECONDS
 
 type TradeRecord = {
   id: number;
@@ -36,7 +36,6 @@ export default function BtcLive() {
   const [live, setLive] = useState<LiveData | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [amount, setAmount] = useState(5);
@@ -159,13 +158,14 @@ export default function BtcLive() {
     });
   }, [theme, chartReady]);
 
-  // Glide loop -- real data only arrives every POLL_MS (3s), so instead of
-  // the line jumping to each new point, this runs much more frequently
-  // (~8x/sec) and feeds the chart a smoothly interpolated value between the
-  // last two REAL prices, based on how far through the current poll
-  // interval we are. lightweight-charts' update() is cheap (canvas-based,
-  // no full-tree redraw), so calling it this often is fine performance-wise
-  // -- this is what actually produces continuous motion instead of ticks.
+  // Glide loop -- real data now arrives every ~1s via the SSE push (see
+  // below), so instead of the line jumping to each new point, this runs
+  // much more frequently (~15x/sec) and feeds the chart a smoothly
+  // interpolated value between the last two REAL prices, based on how far
+  // through the current update interval we are. lightweight-charts'
+  // update() is cheap (canvas-based, no full-tree redraw), so calling it
+  // this often is fine performance-wise -- this is what actually produces
+  // continuous motion instead of ticks.
   useEffect(() => {
     const id = setInterval(() => {
       if (!seriesRef.current || !lastRealRef.current) return;
@@ -177,83 +177,90 @@ export default function BtcLive() {
         time: Math.floor(Date.now() / 1000) as UTCTimestamp,
         value: interpolated,
       });
-    }, 120);
+    }, 65);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    const poll = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/markets/btc/live`, { cache: "no-store" });
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const data: LiveData = await res.json();
-        setLive(data);
-        setError(null);
+    const handleData = (data: LiveData) => {
+      setLive(data);
+      setError(null);
 
-        // Record this real price for interpolation -- the actual chart
-        // update happens in a separate, much more frequent interval below
-        // (glideRef), which smoothly moves from the PREVIOUS real price to
-        // this one over the next poll interval, instead of the line
-        // jumping the instant new data arrives.
-        const nowMs = Date.now();
-        prevRealRef.current = lastRealRef.current ?? { price: data.current_price_usd, time: nowMs };
-        lastRealRef.current = { price: data.current_price_usd, time: nowMs };
+      // Record this real price for interpolation -- the actual chart
+      // update happens in a separate, much more frequent interval below
+      // (the glide loop), which smoothly moves from the PREVIOUS real
+      // price to this one over the next update interval, instead of the
+      // line jumping the instant new data arrives.
+      const nowMs = Date.now();
+      prevRealRef.current = lastRealRef.current ?? { price: data.current_price_usd, time: nowMs };
+      lastRealRef.current = { price: data.current_price_usd, time: nowMs };
 
-        if (seriesRef.current) {
-          const isUpNow = data.open_price_usd != null && data.current_price_usd > data.open_price_usd;
-          const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
-          const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
-          seriesRef.current.applyOptions({ color: nowColor });
+      if (seriesRef.current) {
+        const isUpNow = data.open_price_usd != null && data.current_price_usd > data.open_price_usd;
+        const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
+        const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+        seriesRef.current.applyOptions({ color: nowColor });
 
-          // Recreate the "open" reference line only when the round actually
-          // changes (a new market_id) -- not every poll, since the open
-          // price is fixed for the whole round.
-          if (data.market_id && data.market_id !== lastMarketIdRef.current && data.open_price_usd != null) {
-            lastMarketIdRef.current = data.market_id;
-            if (openPriceLineRef.current) {
-              seriesRef.current.removePriceLine(openPriceLineRef.current);
-            }
-            openPriceLineRef.current = seriesRef.current.createPriceLine({
-              price: data.open_price_usd,
-              color: theme === "dark" ? "#666666" : "#94A3B8",
-              lineWidth: 1,
-              lineStyle: LineStyle.Dashed,
-              axisLabelVisible: true,
-              title: "open",
-            });
+        // Recreate the "open" reference line only when the round actually
+        // changes (a new market_id) -- not every update, since the open
+        // price is fixed for the whole round.
+        if (data.market_id && data.market_id !== lastMarketIdRef.current && data.open_price_usd != null) {
+          lastMarketIdRef.current = data.market_id;
+          if (openPriceLineRef.current) {
+            seriesRef.current.removePriceLine(openPriceLineRef.current);
           }
-        }
-
-        // Only animate trades that are genuinely NEW since the last poll --
-        // real buys/sells from real users, never simulated. The first poll
-        // just records what already happened without animating any of it,
-        // so opening the page doesn't dump a pile of "historical" bubbles.
-        const trades = data.recent_trades ?? [];
-        if (seenTradeIds.current === null) {
-          seenTradeIds.current = new Set(trades.map((tr) => tr.id));
-        } else {
-          const fresh = trades.filter((tr) => !seenTradeIds.current!.has(tr.id));
-          fresh.forEach((tr) => {
-            seenTradeIds.current!.add(tr.id);
-            const bubbleId = Date.now() + Math.random();
-            const amountNaira = Math.round((tr.amount_kobo || 0) / 100);
-            const x = 10 + Math.random() * 75;
-            setTradeBubbles((prev) => [...prev, { id: bubbleId, outcome: tr.outcome, amountNaira, x }]);
-            setTimeout(() => {
-              setTradeBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
-            }, 1900);
+          openPriceLineRef.current = seriesRef.current.createPriceLine({
+            price: data.open_price_usd,
+            color: theme === "dark" ? "#666666" : "#94A3B8",
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: "open",
           });
         }
-      } catch {
-        setError("Can't reach the live price feed right now.");
+      }
+
+      // Only animate trades that are genuinely NEW since the last update --
+      // real buys/sells from real users, never simulated. The first
+      // message just records what already happened without animating any
+      // of it, so opening the page doesn't dump a pile of "historical"
+      // bubbles.
+      const trades = data.recent_trades ?? [];
+      if (seenTradeIds.current === null) {
+        seenTradeIds.current = new Set(trades.map((tr) => tr.id));
+      } else {
+        const fresh = trades.filter((tr) => !seenTradeIds.current!.has(tr.id));
+        fresh.forEach((tr) => {
+          seenTradeIds.current!.add(tr.id);
+          const bubbleId = Date.now() + Math.random();
+          const amountNaira = Math.round((tr.amount_kobo || 0) / 100);
+          const x = 10 + Math.random() * 75;
+          setTradeBubbles((prev) => [...prev, { id: bubbleId, outcome: tr.outcome, amountNaira, x }]);
+          setTimeout(() => {
+            setTradeBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
+          }, 1900);
+        });
       }
     };
 
-    poll();
-    pollRef.current = setInterval(poll, POLL_MS);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+    // Server-Sent Events instead of REST polling -- the backend pushes an
+    // update the instant its shared background loop has one, rather than
+    // every client independently asking every few seconds. EventSource
+    // also reconnects automatically on a dropped connection, for free.
+    const es = new EventSource(`${API_BASE}/markets/btc/stream`);
+    es.onmessage = (event) => {
+      try {
+        const data: LiveData = JSON.parse(event.data);
+        handleData(data);
+      } catch {
+        // malformed message on one tick -- ignore it, the next one will be fine
+      }
     };
+    es.onerror = () => {
+      setError("Can't reach the live price feed right now.");
+    };
+
+    return () => es.close();
   }, [theme]);
 
   useEffect(() => {

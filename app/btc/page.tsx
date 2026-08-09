@@ -69,6 +69,11 @@ export default function BtcLive() {
   const lastMarketIdRef = useRef<string | null>(null);
   const [chartReady, setChartReady] = useState(false);
 
+  // The last two REAL prices from the backend, used to smoothly glide the
+  // chart between them instead of jumping the instant new data arrives.
+  const prevRealRef = useRef<{ price: number; time: number } | null>(null);
+  const lastRealRef = useRef<{ price: number; time: number } | null>(null);
+
   // Create the chart once on mount.
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -80,6 +85,12 @@ export default function BtcLive() {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: theme === "dark" ? "#666666" : "#94A3B8",
         fontSize: 10,
+        // The library's license requires SOME form of attribution to
+        // TradingView -- either this on-chart logo, or an equivalent link
+        // visible elsewhere on the page. We disable the logo here and add
+        // a small text credit near the chart instead (see below), so this
+        // isn't just deleting a requirement without fulfilling it.
+        attributionLogo: false,
       },
       grid: {
         horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
@@ -148,6 +159,28 @@ export default function BtcLive() {
     });
   }, [theme, chartReady]);
 
+  // Glide loop -- real data only arrives every POLL_MS (3s), so instead of
+  // the line jumping to each new point, this runs much more frequently
+  // (~8x/sec) and feeds the chart a smoothly interpolated value between the
+  // last two REAL prices, based on how far through the current poll
+  // interval we are. lightweight-charts' update() is cheap (canvas-based,
+  // no full-tree redraw), so calling it this often is fine performance-wise
+  // -- this is what actually produces continuous motion instead of ticks.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!seriesRef.current || !lastRealRef.current) return;
+      const prev = prevRealRef.current ?? lastRealRef.current;
+      const last = lastRealRef.current;
+      const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
+      const interpolated = prev.price + (last.price - prev.price) * frac;
+      seriesRef.current.update({
+        time: Math.floor(Date.now() / 1000) as UTCTimestamp,
+        value: interpolated,
+      });
+    }, 120);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     const poll = async () => {
       try {
@@ -157,15 +190,16 @@ export default function BtcLive() {
         setLive(data);
         setError(null);
 
-        // Push straight into the chart -- lightweight-charts' own update()
-        // handles the smooth transition and the sliding time axis natively,
-        // no manual interpolation or React re-render needed for this part.
-        if (seriesRef.current) {
-          seriesRef.current.update({
-            time: Math.floor(Date.now() / 1000) as UTCTimestamp,
-            value: data.current_price_usd,
-          });
+        // Record this real price for interpolation -- the actual chart
+        // update happens in a separate, much more frequent interval below
+        // (glideRef), which smoothly moves from the PREVIOUS real price to
+        // this one over the next poll interval, instead of the line
+        // jumping the instant new data arrives.
+        const nowMs = Date.now();
+        prevRealRef.current = lastRealRef.current ?? { price: data.current_price_usd, time: nowMs };
+        lastRealRef.current = { price: data.current_price_usd, time: nowMs };
 
+        if (seriesRef.current) {
           const isUpNow = data.open_price_usd != null && data.current_price_usd > data.open_price_usd;
           const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
           const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
@@ -377,6 +411,12 @@ export default function BtcLive() {
               </span>
             )}
           </div>
+          <p className={`text-[10px] ${t.textMuted} text-right mt-1`}>
+            Charts by{" "}
+            <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+              TradingView Lightweight Charts
+            </a>
+          </p>
         </div>
 
         {/* ORDER BOOK */}

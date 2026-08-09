@@ -166,6 +166,14 @@ export default function BtcLive() {
   // update() is cheap (canvas-based, no full-tree redraw), so calling it
   // this often is fine performance-wise -- this is what actually produces
   // continuous motion instead of ticks.
+  //
+  // IMPORTANT: UTCTimestamp is just a plain number under a TypeScript
+  // brand -- there's no runtime enforcement that it be a whole second.
+  // Flooring to Math.floor(Date.now()/1000) meant every call within the
+  // same second produced the IDENTICAL timestamp, so the line could only
+  // ever move horizontally once per second no matter how often we updated
+  // the price -- that was the real cause of the "ticking" motion. Using
+  // the raw fractional value lets both axes glide continuously.
   useEffect(() => {
     const id = setInterval(() => {
       if (!seriesRef.current || !lastRealRef.current) return;
@@ -174,7 +182,7 @@ export default function BtcLive() {
       const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
       const interpolated = prev.price + (last.price - prev.price) * frac;
       seriesRef.current.update({
-        time: Math.floor(Date.now() / 1000) as UTCTimestamp,
+        time: (Date.now() / 1000) as UTCTimestamp,
         value: interpolated,
       });
     }, 65);

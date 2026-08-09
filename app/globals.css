@@ -61,3 +61,36 @@ body {
   font-weight: 700;
   z-index: 50;
 }
+
+/* Radar/sonar-style blinking marker at the current price point -- a solid
+   dot with an expanding, fading ring pulsing on a ~2s cycle, like a ship's
+   radar sweep marking a contact. Replaces the old fixed arrowhead. */
+@keyframes radarPing {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  70%  { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.radar-blip {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 40;
+  transform: translate(-50%, -50%);
+  transition: left 0.06s linear, top 0.12s ease-out;
+}
+
+.radar-blip::before,
+.radar-blip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+}
+
+.radar-blip::after {
+  animation: radarPing 2s ease-out infinite;
+}

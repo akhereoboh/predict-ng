@@ -29,6 +29,55 @@ type LiveData = {
   recent_trades: TradeRecord[];
 };
 
+// Casino/odometer-style rolling digits -- each numeral is a tiny vertical
+// "reel" of 0-9 that slides to the new digit's position via a CSS
+// transition, instead of the text just snapping to a new value. Non-digit
+// characters ($, comma, period) render statically alongside the reels.
+function RollingDigit({ digit, color }: { digit: string; color: string }) {
+  if (!/[0-9]/.test(digit)) {
+    return (
+      <span style={{ color, display: "inline-block" }}>{digit}</span>
+    );
+  }
+  const n = parseInt(digit, 10);
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        overflow: "hidden",
+        height: "1em",
+        width: "0.62em",
+        verticalAlign: "top",
+      }}
+    >
+      <span
+        style={{
+          display: "block",
+          transform: `translateY(-${n}em)`,
+          transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          color,
+        }}
+      >
+        {Array.from({ length: 10 }, (_, d) => (
+          <span key={d} style={{ display: "block", height: "1em", lineHeight: "1em" }}>
+            {d}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function RollingNumber({ text, color, className }: { text: string; color: string; className?: string }) {
+  return (
+    <span className={className} style={{ display: "inline-flex", fontVariantNumeric: "tabular-nums" }}>
+      {text.split("").map((ch, i) => (
+        <RollingDigit key={i} digit={ch} color={color} />
+      ))}
+    </span>
+  );
+}
+
 export default function BtcLive() {
   const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
   const router = useRouter();
@@ -66,6 +115,8 @@ export default function BtcLive() {
   const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const openPriceLineRef = useRef<IPriceLine | null>(null);
   const lastMarketIdRef = useRef<string | null>(null);
+  const blipRef = useRef<HTMLDivElement>(null);
+  const currentColorRef = useRef<string>("#CCFF00");
   const [chartReady, setChartReady] = useState(false);
 
   // The last two REAL prices from the backend, used to smoothly glide the
@@ -183,11 +234,43 @@ export default function BtcLive() {
       const last = lastRealRef.current;
       const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
       const interpolated = prev.price + (last.price - prev.price) * frac;
-      seriesRef.current.update({
-        time: (Date.now() / 1000) as UTCTimestamp,
-        value: interpolated,
-      });
+      const time = (Date.now() / 1000) as UTCTimestamp;
+      seriesRef.current.update({ time, value: interpolated });
+
+      // Radar-blip marker -- pins itself to the exact pixel position of
+      // the moving line tip every tick, using the chart's own coordinate
+      // conversion so it never drifts out of sync with the actual line.
+      if (blipRef.current && chartApiRef.current) {
+        const x = chartApiRef.current.timeScale().timeToCoordinate(time);
+        const y = seriesRef.current.priceToCoordinate(interpolated);
+        if (x != null && y != null) {
+          blipRef.current.style.left = `${x}px`;
+          blipRef.current.style.top = `${y}px`;
+          blipRef.current.style.background = currentColorRef.current;
+          blipRef.current.style.visibility = "visible";
+        } else {
+          blipRef.current.style.visibility = "hidden";
+        }
+      }
     }, 65);
+    return () => clearInterval(id);
+  }, []);
+
+  // A separate, slower-cadence interpolated value just for the header's
+  // rolling-digit "Current Price" text -- reuses the same prev/last real
+  // anchors as the chart's glide loop, but updates React state at ~4x/sec
+  // instead of ~15x/sec, since re-rendering the whole page that often
+  // would be wasteful (the chart itself updates imperatively, bypassing
+  // React entirely, which is why it can run much faster).
+  const [displayPrice, setDisplayPrice] = useState<number | null>(null);
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!lastRealRef.current) return;
+      const prev = prevRealRef.current ?? lastRealRef.current;
+      const last = lastRealRef.current;
+      const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
+      setDisplayPrice(prev.price + (last.price - prev.price) * frac);
+    }, 250);
     return () => clearInterval(id);
   }, []);
 
@@ -210,6 +293,7 @@ export default function BtcLive() {
         const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
         const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
         seriesRef.current.applyOptions({ color: nowColor });
+        currentColorRef.current = nowColor;
 
         // Recreate the "open" reference line only when the round actually
         // changes (a new market_id) -- not every update, since the open
@@ -388,8 +472,15 @@ export default function BtcLive() {
                   ${Math.abs((live?.current_price_usd ?? 0) - (live?.open_price_usd ?? 0)).toFixed(2)}
                 </span>
               )}
-              <span className={`text-2xl font-bold ${t.textPrimary}`}>
-                ${live?.current_price_usd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+              <span className="text-2xl font-bold" style={{ lineHeight: 1 }}>
+                {displayPrice != null || live?.current_price_usd != null ? (
+                  <RollingNumber
+                    text={`$${(displayPrice ?? live?.current_price_usd ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`}
+                    color="#F7931A"
+                  />
+                ) : (
+                  <span className={t.textPrimary}>—</span>
+                )}
               </span>
             </div>
           </div>
@@ -411,6 +502,7 @@ export default function BtcLive() {
               <div className={`absolute inset-0 flex items-center justify-center text-sm ${t.textMuted}`}>Loading live price…</div>
             )}
             <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
+            <div ref={blipRef} className="radar-blip" style={{ visibility: "hidden", background: "#CCFF00" }} />
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className={`flex items-center gap-3 text-xs ${t.textMuted}`}>

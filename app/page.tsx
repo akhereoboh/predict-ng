@@ -1269,3 +1269,4 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     </div>
   );
 }
+    

@@ -136,7 +136,7 @@ const MARKETS = [
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
-  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [side, setSide] = useState<"YES" | "NO">("YES");
@@ -213,6 +213,8 @@ export default function Home() {
   const filtered =
     activeFilter === "All"
       ? MARKETS
+      : activeFilter === "Sports"
+      ? [] // real football markets render separately below, not the static mock list
       : MARKETS.filter((m) => m.category === activeFilter);
 
   const activeSide = hoverSide ?? side;
@@ -304,6 +306,102 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [btcLive?.cycle_ends_at]);
+
+  // Real football markets -- fetched live from the backend, only while the
+  // Sports filter is actually selected (no point polling in the background
+  // when nobody's looking at it).
+  type FootballMarket = {
+    id: string;
+    question: string;
+    status: string;
+    winner: string | null;
+    price_yes: number;
+    price_no: number;
+    market_type: string;
+    close_at: string | null;
+    closed: boolean;
+  };
+  type FootballTradeState = { loading: boolean; error: string | null; success: string | null };
+
+  const [footballMarkets, setFootballMarkets] = useState<FootballMarket[]>([]);
+  const [footballLoading, setFootballLoading] = useState(true);
+  const [footballAmounts, setFootballAmounts] = useState<Record<string, number>>({});
+  const [footballTradeStatus, setFootballTradeStatus] = useState<Record<string, FootballTradeState>>({});
+
+  useEffect(() => {
+    if (activeFilter !== "Sports") return;
+    let cancelled = false;
+    const fetchFootballMarkets = async () => {
+      try {
+        const res = await fetch("https://sireai.uk/pm-api/markets", { cache: "no-store" });
+        if (!res.ok) return;
+        const data: Omit<FootballMarket, "closed">[] = await res.json();
+        const now = Date.now();
+        const withClosed: FootballMarket[] = data
+          .filter((m) => m.market_type === "FOOTBALL")
+          .map((m) => ({
+            ...m,
+            closed: m.status !== "OPEN" || (!!m.close_at && new Date(m.close_at).getTime() <= now),
+          }));
+        if (!cancelled) {
+          setFootballMarkets(withClosed);
+        }
+      } catch {
+        // keep showing the last known list rather than clearing it on a blip
+      } finally {
+        if (!cancelled) setFootballLoading(false);
+      }
+    };
+    fetchFootballMarkets();
+    const id = setInterval(fetchFootballMarkets, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [activeFilter]);
+
+  const handleFootballTrade = async (market: FootballMarket, outcome: "YES" | "NO") => {
+    if (!isLoggedIn) {
+      setShowAuthModal(true);
+      return;
+    }
+    const amount = footballAmounts[market.id] ?? 100;
+    const priceFraction = (outcome === "YES" ? market.price_yes : market.price_no) / 100;
+    const estContracts = Math.max(1, Math.round(amount / priceFraction));
+
+    setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: true, error: null, success: null } }));
+    try {
+      const token = await getValidToken();
+      if (!token) {
+        setShowAuthModal(true);
+        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: null, success: null } }));
+        return;
+      }
+      const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ market_id: market.id, outcome, contracts: estContracts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: data.detail || "Trade failed", success: null } }));
+        return;
+      }
+      setFootballTradeStatus((s) => ({
+        ...s,
+        [market.id]: { loading: false, error: null, success: `Bought ${estContracts} ${outcome} for ₦${data.paid_naira.toFixed(2)}` },
+      }));
+      await refreshPortfolio();
+      setFootballMarkets((prev) =>
+        prev.map((m) => (m.id === market.id ? { ...m, price_yes: data.price_yes, price_no: data.price_no } : m))
+      );
+      setTimeout(() => {
+        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: null, success: null } }));
+      }, 4000);
+    } catch {
+      setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: "Network error — try again", success: null } }));
+    }
+  };
 
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans`}>
@@ -518,7 +616,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
             );
           })()}
 
-          {(activeFilter === "All" || activeFilter === "Sports") && (
+          {activeFilter === "All" && (
             <div
               onClick={() => router.push("/football")}
               className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
@@ -534,6 +632,81 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </svg>
               </div>
             </div>
+          )}
+
+          {activeFilter === "Sports" && (
+            <>
+              {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading football markets…</p>}
+              {!footballLoading && footballMarkets.length === 0 && (
+                <p className={`text-sm ${t.textMuted}`}>No football markets open right now. Check back soon.</p>
+              )}
+              {footballMarkets.map((m) => {
+                const closed = m.closed;
+                const status = footballTradeStatus[m.id];
+                return (
+                  <div key={m.id} className={`${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
+                      {closed && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${t.inputBg} ${t.textMuted} shrink-0`}>
+                          {m.status === "RESOLVED" ? `Resolved: ${m.winner}` : "Closed"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <span className="text-base font-bold text-green-500">{m.price_yes.toFixed(1)}%</span>
+                          <span className={`text-xs ${t.textMuted}`}>YES</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-base font-bold text-red-500">{m.price_no.toFixed(1)}%</span>
+                          <span className={`text-xs ${t.textMuted}`}>NO</span>
+                        </div>
+                      </div>
+                      <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
+                        <div className="h-full bg-green-500" style={{ width: `${m.price_yes}%` }} />
+                      </div>
+                    </div>
+
+                    {!closed && (
+                      <>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`text-xs ${t.textMuted}`}>Amount:</span>
+                          <span className={`text-xs ${t.textMuted}`}>₦</span>
+                          <input
+                            type="number"
+                            min={10}
+                            value={footballAmounts[m.id] ?? 100}
+                            onChange={(e) => setFootballAmounts((a) => ({ ...a, [m.id]: Number(e.target.value) }))}
+                            className={`w-20 text-sm px-2 py-1 rounded-lg border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleFootballTrade(m, "YES")}
+                            disabled={status?.loading}
+                            className="flex-1 text-sm py-2 rounded-lg border-none cursor-pointer font-semibold bg-green-500 hover:bg-green-400 text-black transition-colors disabled:opacity-50"
+                          >
+                            {status?.loading ? "…" : "Buy YES"}
+                          </button>
+                          <button
+                            onClick={() => handleFootballTrade(m, "NO")}
+                            disabled={status?.loading}
+                            className="flex-1 text-sm py-2 rounded-lg border-none cursor-pointer font-semibold bg-red-500 hover:bg-red-400 text-white transition-colors disabled:opacity-50"
+                          >
+                            {status?.loading ? "…" : "Buy NO"}
+                          </button>
+                        </div>
+                        {status?.error && <p className="text-xs text-red-500 mt-2">{status.error}</p>}
+                        {status?.success && <p className="text-xs text-green-500 mt-2">{status.success}</p>}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </>
           )}
 
           {filtered.map((market, i) => (

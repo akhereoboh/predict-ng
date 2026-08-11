@@ -215,7 +215,7 @@ const TOP_HOLDERS = [
 ];
 
 export default function MarketPage() {
-  const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
+  const { theme, toggleTheme, t, login, signup, authError, authLoading } = useTheme();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -237,6 +237,7 @@ export default function MarketPage() {
   const [authPassword, setAuthPassword] = useState("");
   const [authUsername, setAuthUsername] = useState("");
   const [authPhone, setAuthPhone] = useState("");
+  const [signupMessage, setSignupMessage] = useState<string | null>(null);
 
   const price = side === "YES" ? market.yesPrice : market.noPrice;
   const payout = (amount / price).toFixed(2);
@@ -734,7 +735,7 @@ export default function MarketPage() {
               <>
                 <h2 className={`text-lg font-bold ${t.textPrimary} text-center mb-1`}>Sign in to trade</h2>
                 <p className={`text-xs ${t.textMuted} text-center mb-6`}>You need an account to place trades. Browsing is always free.</p>
-                <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                <button onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer flex items-center justify-center gap-2 hover:opacity-80`}>
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -762,7 +763,7 @@ export default function MarketPage() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>Back
                 </button>
                 <h2 className={`text-lg font-bold ${t.textPrimary} text-center mb-5`}>Welcome back</h2>
-                <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                <button onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer flex items-center justify-center gap-2 hover:opacity-80`}>
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -778,11 +779,12 @@ export default function MarketPage() {
                   <div className={`flex-1 h-px ${theme === "dark" ? "bg-white/10" : "bg-slate-200"}`} />
                 </div>
                 <div className="flex flex-col gap-2 mb-3">
-                  <input type="text" placeholder="Username or email" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
+                  {authError && <p className="text-xs text-red-500 text-center">{authError}</p>}
+                  <input type="email" placeholder="Email" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                   <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                 </div>
                 <button className={`text-xs ${t.textMuted} bg-transparent border-none cursor-pointer mb-4 w-full text-right`}>Forgot password?</button>
-                <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Log in</button>
+                <button onClick={async () => { const ok = await login(authUsername, authPassword); if (ok) { setShowAuthModal(false); setAuthView("choice"); setAuthUsername(""); setAuthPassword(""); } }} disabled={authLoading} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors disabled:opacity-50 ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>{authLoading ? "…" : "Log in"}</button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>No account? <span onClick={() => setAuthView("signup")} className="text-[#CCFF00] cursor-pointer">Sign up</span></p>
               </>
             )}
@@ -793,7 +795,7 @@ export default function MarketPage() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>Back
                 </button>
                 <h2 className={`text-lg font-bold ${t.textPrimary} text-center mb-5`}>Create account</h2>
-                <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                <button onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer flex items-center justify-center gap-2 hover:opacity-80`}>
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -809,11 +811,13 @@ export default function MarketPage() {
                   <div className={`flex-1 h-px ${theme === "dark" ? "bg-white/10" : "bg-slate-200"}`} />
                 </div>
                 <div className="flex flex-col gap-2 mb-4">
+                  {signupMessage && <p className="text-xs text-green-500 text-center">{signupMessage}</p>}
+                  {authError && <p className="text-xs text-red-500 text-center">{authError}</p>}
                   <input type="email" placeholder="Email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                   <input type="tel" placeholder="Phone number" value={authPhone} onChange={(e) => setAuthPhone(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                   <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`} />
                 </div>
-                <button onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>Create account</button>
+                <button onClick={async () => { const res = await signup(authEmail, authPassword); if (res.ok) { setSignupMessage("Check your email to confirm your account, then log in."); setAuthView("login"); setAuthEmail(""); setAuthPassword(""); setAuthPhone(""); } }} disabled={authLoading} className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors disabled:opacity-50 ${theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"}`}>{authLoading ? "…" : "Create account"}</button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>Already have an account? <span onClick={() => setAuthView("login")} className="text-[#CCFF00] cursor-pointer">Log in</span></p>
               </>
             )}

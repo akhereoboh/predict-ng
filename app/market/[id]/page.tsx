@@ -261,8 +261,11 @@ export default function MarketPage() {
 
   const [realMarket, setRealMarket] = useState<RealMarket | null>(null);
   const [realIsClosed, setRealIsClosed] = useState(false);
-  const [realSide, setRealSide] = useState<"YES" | "NO">("YES");
-  const [realAmount, setRealAmount] = useState(5);
+  const [chartTradeCount, setChartTradeCount] = useState(0);
+  const [orderBookLiquidity] = useState(() => ({
+    yes: [0.33, 0.32, 0.31, 0.30].map((p) => ({ p, qty: Math.floor(Math.random() * 500 + 100) })),
+    no: [0.67, 0.68, 0.69, 0.70].map((p) => ({ p, qty: Math.floor(Math.random() * 500 + 100) })),
+  }));
   const [realTradeStatus, setRealTradeStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -327,6 +330,7 @@ export default function MarketPage() {
         const res = await fetch(`https://sireai.uk/pm-api/markets/${id}/chart`, { cache: "no-store" });
         if (!res.ok) return;
         const rows: { created_at: string; price_yes_after: number }[] = await res.json();
+        setChartTradeCount(rows.length);
         const points: { time: UTCTimestamp; value: number }[] = [];
         for (const r of rows) {
           const t2 = Math.floor(new Date(r.created_at).getTime() / 1000) as UTCTimestamp;
@@ -373,8 +377,8 @@ export default function MarketPage() {
   const handleRealBuy = async () => {
     if (!realMarket) return;
     if (!isLoggedIn) { setShowAuthModal(true); return; }
-    const priceFraction = (realSide === "YES" ? realMarket.price_yes : realMarket.price_no) / 100;
-    const estContracts = Math.max(1, Math.round(realAmount / priceFraction));
+    const priceFraction = (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100;
+    const estContracts = Math.max(1, Math.round(amount / priceFraction));
     setRealTradeStatus({ loading: true, error: null, success: null });
     try {
       const token = await getValidToken();
@@ -386,14 +390,14 @@ export default function MarketPage() {
       const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ market_id: realMarket.id, outcome: realSide, contracts: estContracts }),
+        body: JSON.stringify({ market_id: realMarket.id, outcome: side, contracts: estContracts }),
       });
       const data = await res.json();
       if (!res.ok) {
         setRealTradeStatus({ loading: false, error: data.detail || "Trade failed", success: null });
         return;
       }
-      setRealTradeStatus({ loading: false, error: null, success: `Bought ${estContracts} ${realSide} for ₦${data.paid_naira.toFixed(2)}` });
+      setRealTradeStatus({ loading: false, error: null, success: `Bought ${estContracts} ${side} for ₦${data.paid_naira.toFixed(2)}` });
       await refreshPortfolio();
       setRealMarket((prev) => prev && ({ ...prev, price_yes: data.price_yes, price_no: data.price_no }));
       setTimeout(() => setRealTradeStatus({ loading: false, error: null, success: null }), 4000);
@@ -402,7 +406,7 @@ export default function MarketPage() {
     }
   };
 
-  const price = side === "YES" ? market.yesPrice : market.noPrice;
+  const price = isRealMarket && realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : (side === "YES" ? market.yesPrice : market.noPrice);
   const payout = (amount / price).toFixed(2);
   const fee = (amount * 0.02).toFixed(2);
 
@@ -420,13 +424,14 @@ export default function MarketPage() {
   };
 
   if (isRealMarket) {
-    const realPrice = realMarket ? (realSide === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : 0.5;
-    const realPayout = realPrice > 0 ? (realAmount / realPrice).toFixed(2) : "0.00";
-    const realFee = (realAmount * 0.02).toFixed(2);
+    const price = realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : 0.5;
+    const payout = price > 0 ? (amount / price).toFixed(2) : "0.00";
+    const fee = (amount * 0.02).toFixed(2);
+    const kickoffEstimate = realMarket?.close_at ? new Date(new Date(realMarket.close_at).getTime() - 10 * 60 * 1000) : null;
 
     return (
       <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-64`}>
-        {/* NAV — identical to the static page's nav */}
+        {/* NAV */}
         <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm px-4 h-12 flex items-center justify-between`}>
           <button onClick={() => router.back()} className={`flex items-center gap-1.5 ${t.textMuted} cursor-pointer border-none bg-transparent text-sm`}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,120 +443,288 @@ export default function MarketPage() {
             <span className={`w-5 h-5 rounded-md ${t.accent} flex items-center justify-center text-white text-xs font-black italic`}>E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
-          <button onClick={toggleTheme} className={`w-7 h-7 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg}`}>
-            {theme === "light" ? (
-              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          <div className="flex items-center gap-2">
+            <button onClick={toggleTheme} className={`w-7 h-7 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg}`}>
+              {theme === "light" ? (
+                <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              )}
+            </button>
+            <button onClick={() => setBookmarked(!bookmarked)} className={`p-1.5 cursor-pointer border-none bg-transparent ${bookmarked ? t.accentText : t.textMuted}`}>
+              <svg className="w-4 h-4" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </button>
+            <button className={`p-1.5 cursor-pointer border-none bg-transparent ${t.textMuted}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-            )}
-          </button>
+            </button>
+          </div>
         </nav>
 
         <div className="max-w-2xl mx-auto px-4 py-5">
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme === "dark" ? "bg-emerald-900/40 text-emerald-400" : "bg-emerald-100 text-emerald-700"}`}>
-            Football
-          </span>
-          <h1 className={`text-xl font-bold ${t.textPrimary} mt-2 mb-4 leading-snug`}>
-            {realMarket ? realMarket.question : "Loading match…"}
-          </h1>
+          {/* HEADER */}
+          <div className="mb-4">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme === "dark" ? "bg-[#CCFF00]/10 text-[#CCFF00]" : "bg-blue-100 text-blue-700"}`}>Football</span>
+            <h1 className={`text-xl font-bold ${t.textPrimary} mt-2 leading-snug`}>{realMarket ? realMarket.question : "Loading match…"}</h1>
+          </div>
 
-          {realMarket && (
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <span className="text-lg font-bold text-green-500">{realMarket.price_yes.toFixed(0)}¢</span>
-                  <span className={`text-xs ${t.textMuted}`}>YES</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-lg font-bold text-red-500">{realMarket.price_no.toFixed(0)}¢</span>
-                  <span className={`text-xs ${t.textMuted}`}>NO</span>
-                </div>
-              </div>
-              {realIsClosed && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${t.inputBg} ${t.textMuted}`}>
-                  {realMarket.status === "RESOLVED" ? `Resolved: ${realMarket.winner}` : "Trading closed"}
-                </span>
-              )}
+          {/* CHANCE */}
+          <div className="flex items-center gap-3 mb-4">
+            <div>
+              <div className={`text-3xl font-bold ${t.textPrimary}`}>{realMarket ? realMarket.price_yes.toFixed(0) : "—"}%</div>
+              <div className={`text-xs ${t.textMuted} uppercase tracking-wide`}>Chance</div>
             </div>
-          )}
+            {realIsClosed && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${t.inputBg} ${t.textMuted}`}>
+                {realMarket?.status === "RESOLVED" ? `Resolved: ${realMarket.winner}` : "Trading closed"}
+              </span>
+            )}
+          </div>
 
-          {/* GRAPH */}
+          {/* YES/NO PILL */}
+          <div className="flex gap-2 mb-4">
+            {["Yes", "No"].map((s) => (
+              <button key={s} onClick={() => setSide(s.toUpperCase() as "YES" | "NO")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
+                  side === s.toUpperCase()
+                    ? s === "Yes"
+                      ? theme === "dark" ? "bg-green-500 border-transparent text-black" : `${t.accent} border-transparent text-white`
+                      : theme === "dark" ? "bg-red-500 border-transparent text-white" : "bg-[#6B0D0D] border-transparent text-white"
+                    : `${t.navBg} ${t.border} ${t.textMuted}`
+                }`}
+              >{s}</button>
+            ))}
+          </div>
+
+          {/* CHART */}
           <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
-            <div style={{ height: 260 }}>
+            <div style={{ height: 160 }} className="mb-3">
               {!chartReady && (
                 <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading chart…</div>
               )}
               <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
             </div>
+            <div className="flex items-center justify-between">
+              <div className={`flex items-center gap-3 text-xs ${t.textMuted}`}>
+                <span>{chartTradeCount} Trades</span>
+                <span className={`w-px h-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
+                <span>{realMarket?.close_at ? new Date(realMarket.close_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}</span>
+              </div>
+              <div className="flex gap-1">
+                {["1Y", "1M", "1W", "1D", "12H"].map((p) => (
+                  <button key={p} onClick={() => setPeriod(p)}
+                    className={`text-xs px-2 py-1 rounded cursor-pointer border-none transition-colors ${
+                      period === p ? `${t.accent} text-white font-medium` : `bg-transparent ${t.textMuted}`
+                    }`}
+                  >{p}</button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {!realIsClosed && (
-            <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
-              <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
-                <button
-                  onClick={() => setRealSide("YES")}
-                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                    realSide === "YES" ? "bg-green-500 text-black" : "bg-[#141414] text-white border border-white/20 hover:bg-green-500 hover:text-black hover:border-green-500"
-                  }`}
-                >
-                  Buy YES
-                </button>
-                <button
-                  onClick={() => setRealSide("NO")}
-                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                    realSide === "NO" ? "bg-red-500 text-white" : "bg-[#141414] text-white border border-white/20 hover:bg-red-500 hover:text-white hover:border-red-500"
-                  }`}
-                >
-                  Buy NO
-                </button>
+          {/* ORDER BOOK */}
+          <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
+            <button onClick={() => setOrderBookOpen(!orderBookOpen)} className="w-full flex items-center justify-between px-4 py-3 cursor-pointer border-none bg-transparent text-left">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${t.textPrimary}`}>Order Book</span>
+                <span className={`w-4 h-4 rounded-full ${t.accentBg} ${t.accentText} text-xs flex items-center justify-center font-bold`}>?</span>
               </div>
-
-              <p className={`text-xs ${theme === "dark" ? "text-white/80" : t.textMuted} mb-1.5`}>Amount</p>
-              <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-4`}>
-                <span className="text-sm font-bold text-green-400 shrink-0">₦</span>
-                <input
-                  type="number"
-                  value={realAmount}
-                  onChange={(e) => setRealAmount(Number(e.target.value))}
-                  className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 text-right`}
-                />
-              </div>
-
-              <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
-                <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
-                  <span>{realSide} price</span><span>₦{realPrice.toFixed(2)} per contract</span>
-                </div>
-                <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
-                  <span>Fee (2%)</span><span>₦{realFee}</span>
-                </div>
-                <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
-                <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
-                  <span>Payout if {realSide}</span>
-                  <span className={realSide === "YES" ? "text-green-400" : "text-red-400"}>₦{realPayout}</span>
+              <svg className={`w-4 h-4 ${t.textMuted} transition-transform ${orderBookOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {orderBookOpen && (
+              <div className="px-4 pb-4">
+                <p className={`text-xs ${t.textMuted} mb-3`}>View real-time buy & sell liquidity at different price offers</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-emerald-500 mb-2">YES Bids</p>
+                    {orderBookLiquidity.yes.map((row) => (
+                      <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
+                        <span className="text-emerald-500 font-medium">{row.p.toFixed(2)}e</span>
+                        <span>{row.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
+                    {orderBookLiquidity.no.map((row) => (
+                      <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
+                        <span className="text-[#6B0D0D] font-medium">{row.p.toFixed(2)}e</span>
+                        <span>{row.qty}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              {realTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{realTradeStatus.error}</p>}
-              {realTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{realTradeStatus.success}</p>}
+          {/* MARKET RULES */}
+          <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
+            <h3 className={`text-sm font-semibold ${t.textPrimary} mb-3`}>Market Rules & Timelines</h3>
+            <p className={`text-sm ${t.textMuted} mb-3 leading-relaxed`}>
+              This market resolves based on the real result of this football match. Trading closes automatically shortly after kickoff, and the result is confirmed and finalized manually by an admin once the match has ended.
+            </p>
+            <p className={`text-sm ${t.textMuted} mb-1`}>
+              This market will resolve as <span className={`${t.accentText} font-medium`}>Yes</span> if the home team wins.
+            </p>
+            <p className={`text-sm ${t.textMuted} mb-3`}>
+              It will resolve as <span className="text-[#6B0D0D] font-medium">No</span> if the away team wins, or the match is a draw.
+            </p>
+          </div>
 
-              <button
-                onClick={() => { if (!isLoggedIn) { setShowAuthModal(true); return; } handleRealBuy(); }}
-                disabled={realTradeStatus.loading}
-                className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors disabled:opacity-50 ${
-                  realSide === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
-                }`}
-              >
-                {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${realSide}`}
-              </button>
-            </div>
-          )}
+          {/* TIMELINE */}
+          <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
+            <button onClick={() => setTimelineOpen(!timelineOpen)} className="w-full flex items-center justify-between px-4 py-3 cursor-pointer border-none bg-transparent text-left">
+              <span className={`text-sm font-semibold ${t.textPrimary}`}>Timeline & Payout</span>
+              <svg className={`w-4 h-4 ${t.textMuted} transition-transform ${timelineOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {timelineOpen && (
+              <div className="px-4 pb-4">
+                {[
+                  { label: "Kickoff", date: kickoffEstimate ? kickoffEstimate.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—", done: true },
+                  { label: "Trading Closes", date: realMarket?.close_at ? new Date(realMarket.close_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—", done: !!realIsClosed },
+                  { label: "Payout", date: "Shortly after the match ends and an admin confirms the result", done: realMarket?.status === "RESOLVED" },
+                ].map((step, i) => (
+                  <div key={i} className="flex gap-3 items-start">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${step.done ? "border-emerald-500 bg-emerald-500" : `${t.border} ${t.navBg}`}`}>
+                        {step.done && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      {i < 2 && <div className={`w-px h-6 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"} mt-1`} />}
+                    </div>
+                    <div className="pb-4">
+                      <p className={`text-sm font-medium ${step.done ? "text-emerald-500" : t.textPrimary}`}>{step.label}</p>
+                      <p className={`text-xs ${t.textMuted}`}>{step.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* AUTH MODAL — reuse the same modal as the static page below */}
+        {/* FIXED BOTTOM */}
+        <div className="fixed bottom-0 left-0 right-0 z-20">
+          <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
+            <div className="max-w-2xl mx-auto px-4 pt-3 pb-2">
+              {realTradeStatus.error && <p className="text-xs text-red-500 mb-1 text-center">{realTradeStatus.error}</p>}
+              {realTradeStatus.success && <p className="text-xs text-green-500 mb-1 text-center">{realTradeStatus.success}</p>}
+
+              <div className="flex gap-2 mb-2">
+                <button onClick={() => setSide("YES")}
+                  className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                    side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
+                  }`}
+                >
+                  Up {realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e
+                </button>
+                <button onClick={() => setSide("NO")}
+                  className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                    side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
+                  }`}
+                >
+                  Down {realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mb-2">
+                <span className={`text-xs ${t.textMuted}`}>${amount}.00 cash</span>
+                <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
+                  {editing ? "Done" : "Edit"}
+                </button>
+              </div>
+
+              {editing && (
+                <div className="flex gap-2 mb-2">
+                  {customAmounts.map((a, i) => (
+                    <input key={i} type="number" value={a}
+                      onChange={(e) => {
+                        const updated = [...customAmounts];
+                        updated[i] = Number(e.target.value);
+                        setCustomAmounts(updated);
+                      }}
+                      className={`flex-1 text-center text-sm font-bold ${t.inputBg} border ${t.border} rounded-xl py-2.5 outline-none ${t.textPrimary} w-0`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {!editing && (
+                <div className="flex gap-2 mb-2">
+                  {customAmounts.map((a) => (
+                    <button key={a} onClick={() => setAmount(a)}
+                      className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
+                        amount === a
+                          ? theme === "dark"
+                            ? side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                            : `${t.amountActive} ${t.amountActiveText}`
+                          : `${t.inputBg} ${t.textPrimary}`
+                      }`}
+                    >
+                      <span className="text-sm font-bold">${a}</span>
+                      <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-emerald-500"}`}>
+                        win ${price > 0 ? (a / price).toFixed(0) : "0"}¢
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-center py-1 mb-1">
+                <span className={`text-xs ${t.textMuted}`}>Potential win if {side}: </span>
+                <span className={`text-sm font-bold ${t.accentText}`}>${payout}</span>
+                <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
+              </div>
+
+              {!realIsClosed && (
+                <button
+                  onClick={() => { if (!isLoggedIn) { setShowAuthModal(true); return; } handleRealBuy(); }}
+                  disabled={realTradeStatus.loading}
+                  className={`w-full h-11 rounded-xl text-sm font-bold border-none cursor-pointer disabled:opacity-50 ${
+                    theme === "dark" ? (side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white") : `${t.accent} text-white`
+                  }`}
+                >
+                  {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${side}`}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* BOTTOM NAV */}
+          <nav className={`${t.bottomNav} border-t ${t.bottomNavBorder} flex items-center justify-around px-4 py-2`}>
+            {[
+              { label: "Home", icon: "home" },
+              { label: "Search", icon: "search" },
+              { label: "Breaking", icon: "breaking" },
+              { label: `E${(amount / (price || 1)).toFixed(0)}`, icon: "portfolio" },
+            ].map((item) => (
+              <button key={item.label} onClick={() => { if (item.icon === "home") router.push("/"); if (item.icon === "breaking") router.push("/breaking"); if (item.icon === "search") router.push("/?search=1"); }}
+                className={`flex flex-col items-center gap-1 ${t.textMuted} transition-colors cursor-pointer border-none bg-transparent py-1 px-3`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {item.icon === "home" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
+                  {item.icon === "search" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />}
+                  {item.icon === "breaking" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />}
+                  {item.icon === "portfolio" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />}
+                </svg>
+                <span className="text-xs">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* AUTH MODAL */}
         {showAuthModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowAuthModal(false)}>
             <div className={`${t.cardBg} border ${t.border} rounded-2xl p-6 w-80 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
@@ -601,6 +774,7 @@ export default function MarketPage() {
       </div>
     );
   }
+
 
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-64`}>

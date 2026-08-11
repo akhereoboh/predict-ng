@@ -136,7 +136,7 @@ const MARKETS = [
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
-  const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [side, setSide] = useState<"YES" | "NO">("YES");
@@ -151,6 +151,7 @@ export default function Home() {
   const [authPassword, setAuthPassword] = useState("");
   const [authUsername, setAuthUsername] = useState("");
   const [authPhone, setAuthPhone] = useState("");
+  const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
@@ -323,14 +324,25 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
-                <span className="font-bold text-emerald-500 text-sm">$12.45</span>
+                <span className="font-bold text-emerald-500 text-sm">
+                  {isLoggedIn ? (cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "$12.45"}
+                </span>
               </div>
             </div>
-            <button
-              onClick={() => { if (!isLoggedIn) setShowAuthModal(true); }}
-              className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
-              {isLoggedIn ? "Deposit" : "Sign in"}
-            </button>
+            {isLoggedIn ? (
+              <button
+                onClick={logout}
+                className={`text-xs px-3 py-1.5 rounded-md border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
+              >
+                Log out
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
+                Sign in
+              </button>
+            )}
             {/* THEME TOGGLE */}
             <button
               onClick={toggleTheme}
@@ -505,6 +517,24 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               </div>
             );
           })()}
+
+          {(activeFilter === "All" || activeFilter === "Sports") && (
+            <div
+              onClick={() => router.push("/football")}
+              className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white text-lg shrink-0">⚽</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${t.textPrimary}`}>Football Markets</p>
+                  <p className={`text-xs ${t.textMuted} mt-0.5`}>Real matches, real trades — pick a side and bet on the outcome</p>
+                </div>
+                <svg className={`w-4 h-4 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          )}
 
           {filtered.map((market, i) => (
             <div
@@ -883,7 +913,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
                 {/* Google */}
                 <button
-                  onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                  onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer transition-colors flex items-center justify-center gap-2 hover:opacity-80`}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -939,7 +969,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
                 {/* Google */}
                 <button
-                  onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                  onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer transition-colors flex items-center justify-center gap-2 hover:opacity-80`}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -958,9 +988,10 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </div>
 
                 <div className={`flex flex-col gap-2 mb-3`}>
+                  {authError && <p className="text-xs text-red-500 text-center">{authError}</p>}
                   <input
-                    type="text"
-                    placeholder="Username or email"
+                    type="email"
+                    placeholder="Email"
                     value={authUsername}
                     onChange={(e) => setAuthUsername(e.target.value)}
                     className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none placeholder:${t.textMuted}`}
@@ -975,12 +1006,13 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </div>
                 <button className={`text-xs ${t.textMuted} bg-transparent border-none cursor-pointer mb-4 w-full text-right`}>Forgot password?</button>
                 <button
-                  onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
-                  className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${
+                  onClick={async () => { const ok = await login(authUsername, authPassword); if (ok) { setShowAuthModal(false); setAuthView("choice"); setAuthUsername(""); setAuthPassword(""); } }}
+                  disabled={authLoading}
+                  className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors disabled:opacity-50 ${
                     theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"
                   }`}
                 >
-                  Log in
+                  {authLoading ? "…" : "Log in"}
                 </button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>
                   No account?{" "}
@@ -1000,7 +1032,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
 
                 {/* Google */}
                 <button
-                  onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
+                  onClick={() => alert("Google sign-in isn't set up yet — use email + password below.")}
                   className={`w-full py-2.5 rounded-xl border ${t.border} ${t.cardBg} ${t.textPrimary} font-semibold text-sm mb-3 cursor-pointer transition-colors flex items-center justify-center gap-2 hover:opacity-80`}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -1019,6 +1051,8 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 </div>
 
                 <div className="flex flex-col gap-2 mb-4">
+                  {signupMessage && <p className="text-xs text-green-500 text-center">{signupMessage}</p>}
+                  {authError && <p className="text-xs text-red-500 text-center">{authError}</p>}
                   <input
                     type="email"
                     placeholder="Email"
@@ -1028,7 +1062,7 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                   />
                   <input
                     type="tel"
-                    placeholder="Phone number"
+                    placeholder="Phone number (optional for now)"
                     value={authPhone}
                     onChange={(e) => setAuthPhone(e.target.value)}
                     className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none placeholder:${t.textMuted}`}
@@ -1042,12 +1076,13 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                   />
                 </div>
                 <button
-                  onClick={() => { setIsLoggedIn(true); setShowAuthModal(false); setAuthView("choice"); }}
-                  className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors ${
+                  onClick={async () => { const res = await signup(authEmail, authPassword); if (res.ok) { setSignupMessage("Check your email to confirm your account, then log in."); setAuthView("login"); setAuthEmail(""); setAuthPassword(""); setAuthPhone(""); } }}
+                  disabled={authLoading}
+                  className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors disabled:opacity-50 ${
                     theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"
                   }`}
                 >
-                  Create account
+                  {authLoading ? "…" : "Create account"}
                 </button>
                 <p className={`text-xs ${t.textMuted} text-center mt-4`}>
                   Already have an account?{" "}

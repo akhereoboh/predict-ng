@@ -139,6 +139,15 @@ export default function Home() {
   const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
+  const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
+    id: string;
+    question: string;
+    price_yes: number;
+    price_no: number;
+    close_at: string | null;
+    volume_naira: number;
+    trader_count: number;
+  } | null>(null);
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [amount, setAmount] = useState(10);
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
@@ -218,7 +227,9 @@ export default function Home() {
       : MARKETS.filter((m) => m.category === activeFilter);
 
   const activeSide = hoverSide ?? side;
-const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
+const price = selectedFootballMarket
+    ? (side === "YES" ? selectedFootballMarket.price_yes : selectedFootballMarket.price_no) / 100
+    : side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
   const contracts = (amount / price).toFixed(1);
   const fee = (amount * 0.02).toFixed(2);
   const payout = amount / price;
@@ -319,14 +330,15 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     price_no: number;
     market_type: string;
     close_at: string | null;
+    volume_naira: number;
+    trader_count: number;
     closed: boolean;
   };
   type FootballTradeState = { loading: boolean; error: string | null; success: string | null };
 
   const [footballMarkets, setFootballMarkets] = useState<FootballMarket[]>([]);
   const [footballLoading, setFootballLoading] = useState(true);
-  const [footballAmounts, setFootballAmounts] = useState<Record<string, number>>({});
-  const [footballTradeStatus, setFootballTradeStatus] = useState<Record<string, FootballTradeState>>({});
+  const [footballTradeStatus, setFootballTradeStatus] = useState<FootballTradeState>({ loading: false, error: null, success: null });
 
   useEffect(() => {
     if (activeFilter !== "Sports") return;
@@ -345,6 +357,12 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           }));
         if (!cancelled) {
           setFootballMarkets(withClosed);
+          // keep the selected panel market's price fresh if it's still open
+          setSelectedFootballMarket((prev) => {
+            if (!prev) return prev;
+            const fresh = withClosed.find((m) => m.id === prev.id);
+            return fresh && !fresh.closed ? fresh : prev;
+          });
         }
       } catch {
         // keep showing the last known list rather than clearing it on a blip
@@ -360,46 +378,54 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     };
   }, [activeFilter]);
 
-  const handleFootballTrade = async (market: FootballMarket, outcome: "YES" | "NO") => {
+  // The panel only shows football mode while actually viewing Sports --
+  // switching filters away reverts it to the normal static-market panel.
+  useEffect(() => {
+    if (activeFilter === "Sports") return;
+    const id = requestAnimationFrame(() => setSelectedFootballMarket(null));
+    return () => cancelAnimationFrame(id);
+  }, [activeFilter]);
+
+  const handleFootballBuy = async () => {
+    if (!selectedFootballMarket) return;
     if (!isLoggedIn) {
       setShowAuthModal(true);
       return;
     }
-    const amount = footballAmounts[market.id] ?? 100;
-    const priceFraction = (outcome === "YES" ? market.price_yes : market.price_no) / 100;
+    const market = selectedFootballMarket;
+    const priceFraction = (side === "YES" ? market.price_yes : market.price_no) / 100;
     const estContracts = Math.max(1, Math.round(amount / priceFraction));
 
-    setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: true, error: null, success: null } }));
+    setFootballTradeStatus({ loading: true, error: null, success: null });
     try {
       const token = await getValidToken();
       if (!token) {
         setShowAuthModal(true);
-        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: null, success: null } }));
+        setFootballTradeStatus({ loading: false, error: null, success: null });
         return;
       }
       const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ market_id: market.id, outcome, contracts: estContracts }),
+        body: JSON.stringify({ market_id: market.id, outcome: side, contracts: estContracts }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: data.detail || "Trade failed", success: null } }));
+        setFootballTradeStatus({ loading: false, error: data.detail || "Trade failed", success: null });
         return;
       }
-      setFootballTradeStatus((s) => ({
-        ...s,
-        [market.id]: { loading: false, error: null, success: `Bought ${estContracts} ${outcome} for ₦${data.paid_naira.toFixed(2)}` },
-      }));
+      setFootballTradeStatus({
+        loading: false, error: null,
+        success: `Bought ${estContracts} ${side} for ₦${data.paid_naira.toFixed(2)}`,
+      });
       await refreshPortfolio();
+      setSelectedFootballMarket((prev) => prev && ({ ...prev, price_yes: data.price_yes, price_no: data.price_no }));
       setFootballMarkets((prev) =>
         prev.map((m) => (m.id === market.id ? { ...m, price_yes: data.price_yes, price_no: data.price_no } : m))
       );
-      setTimeout(() => {
-        setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: null, success: null } }));
-      }, 4000);
+      setTimeout(() => setFootballTradeStatus({ loading: false, error: null, success: null }), 4000);
     } catch {
-      setFootballTradeStatus((s) => ({ ...s, [market.id]: { loading: false, error: "Network error — try again", success: null } }));
+      setFootballTradeStatus({ loading: false, error: "Network error — try again", success: null });
     }
   };
 
@@ -637,31 +663,44 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
           {activeFilter === "Sports" && (
             <>
               {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading football markets…</p>}
-              {!footballLoading && footballMarkets.length === 0 && (
+              {!footballLoading && footballMarkets.filter((m) => !m.closed).length === 0 && (
                 <p className={`text-sm ${t.textMuted}`}>No football markets open right now. Check back soon.</p>
               )}
-              {footballMarkets.map((m) => {
-                const closed = m.closed;
-                const status = footballTradeStatus[m.id];
+              {footballMarkets.filter((m) => !m.closed).map((m) => {
+                const isSelected = selectedFootballMarket?.id === m.id;
+                const selectFootball = (pickSide: "YES" | "NO") => {
+                  setPanelVisible(false);
+                  requestAnimationFrame(() => {
+                    setSelectedFootballMarket(m);
+                    setSide(pickSide);
+                    setAmount(10);
+                    setPanelKey((k) => k + 1);
+                    setPanelVisible(true);
+                  });
+                };
                 return (
-                  <div key={m.id} className={`${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
-                    <div className="flex items-start justify-between mb-3 gap-2">
-                      <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
-                      {closed && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${t.inputBg} ${t.textMuted} shrink-0`}>
-                          {m.status === "RESOLVED" ? `Resolved: ${m.winner}` : "Closed"}
-                        </span>
-                      )}
-                    </div>
+                  <div
+                    key={m.id}
+                    onClick={() => selectFootball("YES")}
+                    className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
+                      isSelected
+                        ? `${theme === "dark" ? "border-[#CCFF00] shadow-[#CCFF00]/20" : "border-blue-500 shadow-blue-100"} shadow-md`
+                        : `${t.border} hover:shadow-md`
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
+                    <p className={`text-xs ${t.textMuted} mb-3`}>
+                      ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+                    </p>
 
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <span className="text-base font-bold text-green-500">{m.price_yes.toFixed(1)}%</span>
+                          <span className="text-base font-bold text-green-500">{m.price_yes.toFixed(0)}¢</span>
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <span className="text-base font-bold text-red-500">{m.price_no.toFixed(1)}%</span>
+                          <span className="text-base font-bold text-red-500">{m.price_no.toFixed(0)}¢</span>
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
@@ -670,39 +709,28 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                       </div>
                     </div>
 
-                    {!closed && (
-                      <>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-xs ${t.textMuted}`}>Amount:</span>
-                          <span className={`text-xs ${t.textMuted}`}>₦</span>
-                          <input
-                            type="number"
-                            min={10}
-                            value={footballAmounts[m.id] ?? 100}
-                            onChange={(e) => setFootballAmounts((a) => ({ ...a, [m.id]: Number(e.target.value) }))}
-                            className={`w-20 text-sm px-2 py-1 rounded-lg border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleFootballTrade(m, "YES")}
-                            disabled={status?.loading}
-                            className="flex-1 text-sm py-2 rounded-lg border-none cursor-pointer font-semibold bg-green-500 hover:bg-green-400 text-black transition-colors disabled:opacity-50"
-                          >
-                            {status?.loading ? "…" : "Buy YES"}
-                          </button>
-                          <button
-                            onClick={() => handleFootballTrade(m, "NO")}
-                            disabled={status?.loading}
-                            className="flex-1 text-sm py-2 rounded-lg border-none cursor-pointer font-semibold bg-red-500 hover:bg-red-400 text-white transition-colors disabled:opacity-50"
-                          >
-                            {status?.loading ? "…" : "Buy NO"}
-                          </button>
-                        </div>
-                        {status?.error && <p className="text-xs text-red-500 mt-2">{status.error}</p>}
-                        {status?.success && <p className="text-xs text-green-500 mt-2">{status.success}</p>}
-                      </>
-                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
+                        className={`flex-1 text-sm py-2 rounded-lg border cursor-pointer font-medium transition-colors ${
+                          theme === "dark"
+                            ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
+                            : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        }`}
+                      >
+                        Buy YES · {m.price_yes.toFixed(0)}¢
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
+                        className={`flex-1 text-sm py-2 rounded-lg border cursor-pointer font-medium transition-colors ${
+                          theme === "dark"
+                            ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                            : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
+                        }`}
+                      >
+                        Buy NO · {m.price_no.toFixed(0)}¢
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -848,8 +876,12 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                 ? activeSide === "YES" ? "border-green-500/60" : activeSide === "NO" ? "border-red-500/60" : t.border
                 : t.border
             } ${panelVisible ? "opacity-100" : "opacity-0"}`}>
-            <p className={`text-xs ${theme === "dark" ? "text-white/90" : t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>{selectedMarket.question}</p>
-            <p className={`text-xs ${theme === "dark" ? "text-white/60" : t.textMuted} mb-3`}>{selectedMarket.closes}</p>
+            <p className={`text-xs ${theme === "dark" ? "text-white/90" : t.textMuted} mb-1 leading-snug line-clamp-2 font-medium`}>
+              {selectedFootballMarket ? selectedFootballMarket.question : selectedMarket.question}
+            </p>
+            <p className={`text-xs ${theme === "dark" ? "text-white/60" : t.textMuted} mb-3`}>
+              {selectedFootballMarket ? "Football \u00b7 real match" : selectedMarket.closes}
+            </p>
 
             <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
               <button
@@ -920,9 +952,20 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
               </div>
             </div>
 
+            {selectedFootballMarket && footballTradeStatus.error && (
+              <p className="text-xs text-red-500 mb-2 text-center">{footballTradeStatus.error}</p>
+            )}
+            {selectedFootballMarket && footballTradeStatus.success && (
+              <p className="text-xs text-green-500 mb-2 text-center">{footballTradeStatus.success}</p>
+            )}
+
             <button
-              onClick={() => { if (!isLoggedIn) setShowAuthModal(true); }}
-              className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors ${
+              onClick={() => {
+                if (!isLoggedIn) { setShowAuthModal(true); return; }
+                if (selectedFootballMarket) { handleFootballBuy(); }
+              }}
+              disabled={!!selectedFootballMarket && footballTradeStatus.loading}
+              className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors disabled:opacity-50 ${
                 theme === "dark"
                   ? activeSide === "YES"
                     ? "bg-green-500 hover:bg-green-400 text-black"
@@ -931,7 +974,11 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
                     : side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
                   : side === "YES" ? `${t.accent} ${t.accentHover} text-white` : "bg-[#6B0D0D] text-white"
               }`}>
-              {isLoggedIn ? `Confirm buy ${side}` : `Sign in to trade`}
+              {!isLoggedIn
+                ? "Sign in to trade"
+                : selectedFootballMarket && footballTradeStatus.loading
+                ? "…"
+                : `Confirm buy ${side}`}
             </button>
           </div>
 
@@ -1269,4 +1316,3 @@ const price = side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
     </div>
   );
 }
-    

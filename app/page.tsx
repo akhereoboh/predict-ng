@@ -681,7 +681,7 @@ const price = selectedFootballMarket
                 return (
                   <div
                     key={m.id}
-                    onClick={() => selectFootball("YES")}
+                    onClick={() => router.push(`/market/${m.id}`)}
                     className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
                       isSelected
                         ? `${theme === "dark" ? "border-[#CCFF00] shadow-[#CCFF00]/20" : "border-blue-500 shadow-blue-100"} shadow-md`
@@ -712,7 +712,9 @@ const price = selectedFootballMarket
                     <div className="flex gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
-                        className={`flex-1 text-sm py-2 rounded-lg border cursor-pointer font-medium transition-colors ${
+                        onMouseEnter={() => setHoverSide("YES")}
+                        onMouseLeave={() => setHoverSide(null)}
+                        className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
                           theme === "dark"
                             ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
                             : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
@@ -722,7 +724,9 @@ const price = selectedFootballMarket
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
-                        className={`flex-1 text-sm py-2 rounded-lg border cursor-pointer font-medium transition-colors ${
+                        onMouseEnter={() => setHoverSide("NO")}
+                        onMouseLeave={() => setHoverSide(null)}
+                        className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
                           theme === "dark"
                             ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
                             : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"

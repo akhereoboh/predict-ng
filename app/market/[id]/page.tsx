@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTheme } from "../../context/theme";
+import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 
 const MARKETS = [
   {
@@ -215,7 +216,7 @@ const TOP_HOLDERS = [
 ];
 
 export default function MarketPage() {
-  const { theme, toggleTheme, t, login, signup, authError, authLoading } = useTheme();
+  const { theme, toggleTheme, t, login, signup, authError, authLoading, isLoggedIn, getValidToken, refreshPortfolio } = useTheme();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -239,6 +240,168 @@ export default function MarketPage() {
   const [authPhone, setAuthPhone] = useState("");
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
 
+  // --- REAL BACKEND MARKETS (e.g. football matches) ---
+  // The static MARKETS array above is mock data for the original design
+  // pass. Any id that ISN'T in that array is treated as a real market
+  // fetched from the backend, with a real chart and real trade execution --
+  // this branch renders entirely separately below, so the existing static
+  // page (already working, already approved) isn't touched or put at risk.
+  const isRealMarket = !MARKETS.some((m) => m.id === id);
+
+  type RealMarket = {
+    id: string;
+    question: string;
+    status: string;
+    winner: string | null;
+    price_yes: number;
+    price_no: number;
+    market_type: string;
+    close_at: string | null;
+  };
+
+  const [realMarket, setRealMarket] = useState<RealMarket | null>(null);
+  const [realIsClosed, setRealIsClosed] = useState(false);
+  const [realSide, setRealSide] = useState<"YES" | "NO">("YES");
+  const [realAmount, setRealAmount] = useState(5);
+  const [realTradeStatus, setRealTradeStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
+
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartApiRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const [chartReady, setChartReady] = useState(false);
+
+  // Create the chart once, only when this is actually a real market.
+  useEffect(() => {
+    if (!isRealMarket || !chartContainerRef.current) return;
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 260,
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: theme === "dark" ? "#666666" : "#94A3B8",
+        fontSize: 10,
+        attributionLogo: false,
+      },
+      grid: {
+        horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
+        vertLines: { visible: false },
+      },
+      rightPriceScale: { borderVisible: false },
+      timeScale: { borderVisible: false, timeVisible: true },
+      crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
+      handleScroll: false,
+      handleScale: false,
+    });
+    const series = chart.addSeries(LineSeries, {
+      color: "#CCFF00",
+      lineWidth: 2,
+      priceLineVisible: true,
+      priceLineColor: "#CCFF00",
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+    });
+    chartApiRef.current = chart;
+    seriesRef.current = series;
+    setChartReady(true);
+
+    const handleResize = () => {
+      if (chartContainerRef.current) chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      chart.remove();
+      chartApiRef.current = null;
+      seriesRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealMarket]);
+
+  // Load the market's real trade history into the chart once it's ready --
+  // this is the "graphs and all that thing" showing how the odds actually
+  // moved as real people traded, using GET /markets/{id}/chart.
+  useEffect(() => {
+    if (!isRealMarket || !chartReady || !seriesRef.current) return;
+    (async () => {
+      try {
+        const res = await fetch(`https://sireai.uk/pm-api/markets/${id}/chart`, { cache: "no-store" });
+        if (!res.ok) return;
+        const rows: { created_at: string; price_yes_after: number }[] = await res.json();
+        const points: { time: UTCTimestamp; value: number }[] = [];
+        for (const r of rows) {
+          const t2 = Math.floor(new Date(r.created_at).getTime() / 1000) as UTCTimestamp;
+          // lightweight-charts requires strictly increasing time -- if two
+          // trades landed in the same second, keep the later one's price.
+          if (points.length && points[points.length - 1].time === t2) {
+            points[points.length - 1] = { time: t2, value: r.price_yes_after };
+          } else {
+            points.push({ time: t2, value: r.price_yes_after });
+          }
+        }
+        if (points.length > 0) seriesRef.current?.setData(points);
+      } catch {
+        // chart just stays empty on a failed fetch -- not critical
+      }
+    })();
+  }, [isRealMarket, chartReady, id]);
+
+  // Poll the live market state and keep the chart's latest point current.
+  useEffect(() => {
+    if (!isRealMarket) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`https://sireai.uk/pm-api/markets/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data: RealMarket = await res.json();
+        if (cancelled) return;
+        setRealMarket(data);
+        setRealIsClosed(data.status !== "OPEN" || (!!data.close_at && new Date(data.close_at).getTime() <= Date.now()));
+        seriesRef.current?.update({ time: Math.floor(Date.now() / 1000) as UTCTimestamp, value: data.price_yes });
+      } catch {
+        // keep showing the last known state on a blip
+      }
+    };
+    poll();
+    const intervalId = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [isRealMarket, id]);
+
+  const handleRealBuy = async () => {
+    if (!realMarket) return;
+    if (!isLoggedIn) { setShowAuthModal(true); return; }
+    const priceFraction = (realSide === "YES" ? realMarket.price_yes : realMarket.price_no) / 100;
+    const estContracts = Math.max(1, Math.round(realAmount / priceFraction));
+    setRealTradeStatus({ loading: true, error: null, success: null });
+    try {
+      const token = await getValidToken();
+      if (!token) {
+        setShowAuthModal(true);
+        setRealTradeStatus({ loading: false, error: null, success: null });
+        return;
+      }
+      const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ market_id: realMarket.id, outcome: realSide, contracts: estContracts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRealTradeStatus({ loading: false, error: data.detail || "Trade failed", success: null });
+        return;
+      }
+      setRealTradeStatus({ loading: false, error: null, success: `Bought ${estContracts} ${realSide} for ₦${data.paid_naira.toFixed(2)}` });
+      await refreshPortfolio();
+      setRealMarket((prev) => prev && ({ ...prev, price_yes: data.price_yes, price_no: data.price_no }));
+      setTimeout(() => setRealTradeStatus({ loading: false, error: null, success: null }), 4000);
+    } catch {
+      setRealTradeStatus({ loading: false, error: "Network error — try again", success: null });
+    }
+  };
+
   const price = side === "YES" ? market.yesPrice : market.noPrice;
   const payout = (amount / price).toFixed(2);
   const fee = (amount * 0.02).toFixed(2);
@@ -255,6 +418,189 @@ export default function MarketPage() {
     if (cat === "Sports") return "bg-blue-100 text-blue-700";
     return "bg-emerald-100 text-emerald-700";
   };
+
+  if (isRealMarket) {
+    const realPrice = realMarket ? (realSide === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : 0.5;
+    const realPayout = realPrice > 0 ? (realAmount / realPrice).toFixed(2) : "0.00";
+    const realFee = (realAmount * 0.02).toFixed(2);
+
+    return (
+      <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-64`}>
+        {/* NAV — identical to the static page's nav */}
+        <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm px-4 h-12 flex items-center justify-between`}>
+          <button onClick={() => router.back()} className={`flex items-center gap-1.5 ${t.textMuted} cursor-pointer border-none bg-transparent text-sm`}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-5 h-5 rounded-md ${t.accent} flex items-center justify-center text-white text-xs font-black italic`}>E</span>
+            <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
+          </div>
+          <button onClick={toggleTheme} className={`w-7 h-7 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg}`}>
+            {theme === "light" ? (
+              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            )}
+          </button>
+        </nav>
+
+        <div className="max-w-2xl mx-auto px-4 py-5">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme === "dark" ? "bg-emerald-900/40 text-emerald-400" : "bg-emerald-100 text-emerald-700"}`}>
+            Football
+          </span>
+          <h1 className={`text-xl font-bold ${t.textPrimary} mt-2 mb-4 leading-snug`}>
+            {realMarket ? realMarket.question : "Loading match…"}
+          </h1>
+
+          {realMarket && (
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <span className="text-lg font-bold text-green-500">{realMarket.price_yes.toFixed(0)}¢</span>
+                  <span className={`text-xs ${t.textMuted}`}>YES</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-lg font-bold text-red-500">{realMarket.price_no.toFixed(0)}¢</span>
+                  <span className={`text-xs ${t.textMuted}`}>NO</span>
+                </div>
+              </div>
+              {realIsClosed && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${t.inputBg} ${t.textMuted}`}>
+                  {realMarket.status === "RESOLVED" ? `Resolved: ${realMarket.winner}` : "Trading closed"}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* GRAPH */}
+          <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
+            <div style={{ height: 260 }}>
+              {!chartReady && (
+                <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading chart…</div>
+              )}
+              <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
+            </div>
+          </div>
+
+          {!realIsClosed && (
+            <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 shadow-sm`}>
+              <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
+                <button
+                  onClick={() => setRealSide("YES")}
+                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                    realSide === "YES" ? "bg-green-500 text-black" : "bg-[#141414] text-white border border-white/20 hover:bg-green-500 hover:text-black hover:border-green-500"
+                  }`}
+                >
+                  Buy YES
+                </button>
+                <button
+                  onClick={() => setRealSide("NO")}
+                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                    realSide === "NO" ? "bg-red-500 text-white" : "bg-[#141414] text-white border border-white/20 hover:bg-red-500 hover:text-white hover:border-red-500"
+                  }`}
+                >
+                  Buy NO
+                </button>
+              </div>
+
+              <p className={`text-xs ${theme === "dark" ? "text-white/80" : t.textMuted} mb-1.5`}>Amount</p>
+              <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-4`}>
+                <span className="text-sm font-bold text-green-400 shrink-0">₦</span>
+                <input
+                  type="number"
+                  value={realAmount}
+                  onChange={(e) => setRealAmount(Number(e.target.value))}
+                  className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 text-right`}
+                />
+              </div>
+
+              <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
+                <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
+                  <span>{realSide} price</span><span>₦{realPrice.toFixed(2)} per contract</span>
+                </div>
+                <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
+                  <span>Fee (2%)</span><span>₦{realFee}</span>
+                </div>
+                <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
+                <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
+                  <span>Payout if {realSide}</span>
+                  <span className={realSide === "YES" ? "text-green-400" : "text-red-400"}>₦{realPayout}</span>
+                </div>
+              </div>
+
+              {realTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{realTradeStatus.error}</p>}
+              {realTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{realTradeStatus.success}</p>}
+
+              <button
+                onClick={() => { if (!isLoggedIn) { setShowAuthModal(true); return; } handleRealBuy(); }}
+                disabled={realTradeStatus.loading}
+                className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors disabled:opacity-50 ${
+                  realSide === "YES" ? "bg-green-500 hover:bg-green-400 text-black" : "bg-red-500 hover:bg-red-400 text-white"
+                }`}
+              >
+                {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${realSide}`}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* AUTH MODAL — reuse the same modal as the static page below */}
+        {showAuthModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowAuthModal(false)}>
+            <div className={`${t.cardBg} border ${t.border} rounded-2xl p-6 w-80 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 mb-5 justify-center">
+                <span className="w-7 h-7 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-sm font-black italic">E</span>
+                <span className={`text-base font-bold ${t.textPrimary}`}>Eris</span>
+              </div>
+              {authView === "choice" && (
+                <>
+                  <h2 className={`text-lg font-bold ${t.textPrimary} text-center mb-4`}>Sign in to trade</h2>
+                  <button onClick={() => setAuthView("login")} className={`w-full py-2.5 rounded-xl font-semibold text-sm mb-2 border-none cursor-pointer ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}>Log in</button>
+                  <button onClick={() => setAuthView("signup")} className={`w-full py-2.5 rounded-xl font-semibold text-sm border ${t.border} ${t.textPrimary} cursor-pointer bg-transparent`}>Create account</button>
+                </>
+              )}
+              {authView === "login" && (
+                <>
+                  {authError && <p className="text-xs text-red-500 text-center mb-2">{authError}</p>}
+                  <input type="email" placeholder="Email" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-2`} />
+                  <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`} />
+                  <button
+                    onClick={async () => { const ok = await login(authUsername, authPassword); if (ok) { setShowAuthModal(false); setAuthView("choice"); setAuthUsername(""); setAuthPassword(""); } }}
+                    disabled={authLoading}
+                    className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}
+                  >
+                    {authLoading ? "…" : "Log in"}
+                  </button>
+                </>
+              )}
+              {authView === "signup" && (
+                <>
+                  {signupMessage && <p className="text-xs text-green-500 text-center mb-2">{signupMessage}</p>}
+                  {authError && <p className="text-xs text-red-500 text-center mb-2">{authError}</p>}
+                  <input type="email" placeholder="Email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-2`} />
+                  <input type="password" placeholder="Password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`} />
+                  <button
+                    onClick={async () => { const res = await signup(authEmail, authPassword); if (res.ok) { setSignupMessage("Check your email to confirm your account, then log in."); setAuthView("login"); setAuthEmail(""); setAuthPassword(""); } }}
+                    disabled={authLoading}
+                    className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}
+                  >
+                    {authLoading ? "…" : "Create account"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-64`}>

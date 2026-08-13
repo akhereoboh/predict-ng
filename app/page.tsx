@@ -136,7 +136,7 @@ const MARKETS = [
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
-  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio, userId } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
@@ -155,6 +155,10 @@ export default function Home() {
   const [panelVisible, setPanelVisible] = useState(true);
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(1000);
+  const [depositEmail, setDepositEmail] = useState("");
+  const [depositStatus, setDepositStatus] = useState<{ loading: boolean; message: string | null }>({ loading: false, message: null });
   const [authView, setAuthView] = useState<"choice" | "login" | "signup">("choice");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -386,6 +390,61 @@ const price = selectedFootballMarket
     return () => cancelAnimationFrame(id);
   }, [activeFilter]);
 
+  // Loads Flutterwave's inline checkout script once (if not already on the
+  // page), then opens their payment modal. Money is NEVER credited from
+  // this client-side callback -- it's just here to tell the user "we saw
+  // it too." The actual crediting happens server-side, only after
+  // Flutterwave's webhook confirms the payment with a verified signature
+  // (see payments.py). This matches how you should always handle payments:
+  // never trust the frontend to say a payment succeeded.
+  const handleDeposit = () => {
+    if (!userId) return;
+    if (!depositEmail || !depositEmail.includes("@")) {
+      setDepositStatus({ loading: false, message: "Enter a valid email first." });
+      return;
+    }
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY;
+    if (!publicKey) {
+      setDepositStatus({ loading: false, message: "Deposits aren't configured yet — missing Flutterwave public key." });
+      return;
+    }
+
+    const openCheckout = () => {
+      setDepositStatus({ loading: false, message: null });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).FlutterwaveCheckout({
+        public_key: publicKey,
+        tx_ref: `eris_${userId}_${Date.now()}`,
+        amount: depositAmount,
+        currency: "NGN",
+        payment_options: "card, banktransfer, ussd",
+        customer: { email: depositEmail },
+        meta: { user_id: userId }, // <-- this is how the webhook knows whose account to credit
+        customizations: { title: "Eris", description: "Deposit to your Eris cash balance" },
+        callback: () => {
+          setShowDepositModal(false);
+          setDepositStatus({ loading: false, message: null });
+          // Give the webhook a moment to land, then refresh the real balance.
+          setTimeout(() => { refreshPortfolio(); }, 3000);
+        },
+        onclose: () => {},
+      });
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).FlutterwaveCheckout) {
+      openCheckout();
+      return;
+    }
+    setDepositStatus({ loading: true, message: null });
+    const script = document.createElement("script");
+    script.src = "https://checkout.flutterwave.com/v3.js";
+    script.async = true;
+    script.onload = openCheckout;
+    script.onerror = () => setDepositStatus({ loading: false, message: "Couldn't load the payment form — try again." });
+    document.body.appendChild(script);
+  };
+
   const handleFootballBuy = async () => {
     if (!selectedFootballMarket) return;
     if (!isLoggedIn) {
@@ -454,12 +513,20 @@ const price = selectedFootballMarket
               </div>
             </div>
             {isLoggedIn ? (
-              <button
-                onClick={logout}
-                className={`text-xs px-3 py-1.5 rounded-md border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
-              >
-                Log out
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowDepositModal(true)}
+                  className="text-xs px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none"
+                >
+                  Deposit
+                </button>
+                <button
+                  onClick={logout}
+                  className={`text-xs px-3 py-1.5 rounded-md border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
+                >
+                  Log out
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
@@ -1110,6 +1177,51 @@ const price = selectedFootballMarket
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+    {/* DEPOSIT MODAL */}
+      {showDepositModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowDepositModal(false)}
+        >
+          <div className={`${t.cardBg} border ${t.border} rounded-2xl p-6 w-80 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-5 justify-center">
+              <span className="w-7 h-7 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-sm font-black italic">E</span>
+              <span className={`text-base font-bold ${t.textPrimary}`}>Deposit</span>
+            </div>
+
+            <p className={`text-xs ${t.textMuted} mb-1.5`}>Email</p>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={depositEmail}
+              onChange={(e) => setDepositEmail(e.target.value)}
+              className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+            />
+
+            <p className={`text-xs ${t.textMuted} mb-1.5`}>Amount (₦)</p>
+            <input
+              type="number"
+              min={100}
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(Number(e.target.value))}
+              className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-4`}
+            />
+
+            {depositStatus.message && <p className="text-xs text-red-500 mb-3 text-center">{depositStatus.message}</p>}
+
+            <button
+              onClick={handleDeposit}
+              disabled={depositStatus.loading}
+              className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}
+            >
+              {depositStatus.loading ? "…" : `Pay ₦${depositAmount.toLocaleString()} with Flutterwave`}
+            </button>
+            <p className={`text-[10px] ${t.textMuted} text-center mt-3`}>
+              Your balance updates automatically once payment is confirmed — no need to refresh manually.
+            </p>
           </div>
         </div>
       )}

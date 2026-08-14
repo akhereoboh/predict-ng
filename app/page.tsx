@@ -136,7 +136,7 @@ const MARKETS = [
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
-  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio, userId } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
@@ -157,7 +157,6 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(1000);
-  const [depositEmail, setDepositEmail] = useState("");
   const [depositStatus, setDepositStatus] = useState<{ loading: boolean; message: string | null }>({ loading: false, message: null });
   const [authView, setAuthView] = useState<"choice" | "login" | "signup">("choice");
   const [authEmail, setAuthEmail] = useState("");
@@ -311,6 +310,26 @@ const price = selectedFootballMarket
   }, []);
 
   const [btcSecondsLeft, setBtcSecondsLeft] = useState<number | null>(null);
+
+  // After Bachs' hosted checkout, the user lands back here at
+  // /?deposit=success (or ?deposit=cancelled). The webhook is what
+  // actually credited the balance -- this just refreshes what we show
+  // and tidies the URL, it never credits anything itself.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("deposit");
+    if (status === "success") {
+      refreshPortfolio();
+      const id = requestAnimationFrame(() => setDepositStatus({ loading: false, message: null }));
+      if (status) window.history.replaceState({}, "", window.location.pathname);
+      return () => cancelAnimationFrame(id);
+    }
+    if (status) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!btcLive?.cycle_ends_at) return;
     const tick = () => {
@@ -390,59 +409,47 @@ const price = selectedFootballMarket
     return () => cancelAnimationFrame(id);
   }, [activeFilter]);
 
-  // Loads Flutterwave's inline checkout script once (if not already on the
-  // page), then opens their payment modal. Money is NEVER credited from
-  // this client-side callback -- it's just here to tell the user "we saw
-  // it too." The actual crediting happens server-side, only after
-  // Flutterwave's webhook confirms the payment with a verified signature
-  // (see payments.py). This matches how you should always handle payments:
-  // never trust the frontend to say a payment succeeded.
-  const handleDeposit = () => {
-    if (!userId) return;
-    if (!depositEmail || !depositEmail.includes("@")) {
-      setDepositStatus({ loading: false, message: "Enter a valid email first." });
+  // Asks the backend to start a real Bachs checkout session, then sends
+  // the browser to Bachs' hosted payment page. Money is NEVER credited
+  // from anything that happens in this function -- it only starts the
+  // payment. The actual crediting happens server-side, only after Bachs'
+  // webhook confirms the payment with a verified signature (see
+  // bachs_payments.py). Never trust the frontend to say a payment
+  // succeeded.
+  const handleDeposit = async () => {
+    if (!isLoggedIn) {
+      setShowAuthModal(true);
       return;
     }
-    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY;
-    if (!publicKey) {
-      setDepositStatus({ loading: false, message: "Deposits aren't configured yet — missing Flutterwave public key." });
-      return;
-    }
-
-    const openCheckout = () => {
-      setDepositStatus({ loading: false, message: null });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).FlutterwaveCheckout({
-        public_key: publicKey,
-        tx_ref: `eris_${userId}_${Date.now()}`,
-        amount: depositAmount,
-        currency: "NGN",
-        payment_options: "card, banktransfer, ussd",
-        customer: { email: depositEmail },
-        meta: { user_id: userId }, // <-- this is how the webhook knows whose account to credit
-        customizations: { title: "Eris", description: "Deposit to your Eris cash balance" },
-        callback: () => {
-          setShowDepositModal(false);
-          setDepositStatus({ loading: false, message: null });
-          // Give the webhook a moment to land, then refresh the real balance.
-          setTimeout(() => { refreshPortfolio(); }, 3000);
-        },
-        onclose: () => {},
-      });
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).FlutterwaveCheckout) {
-      openCheckout();
+    if (!depositAmount || depositAmount <= 0) {
+      setDepositStatus({ loading: false, message: "Enter an amount first." });
       return;
     }
     setDepositStatus({ loading: true, message: null });
-    const script = document.createElement("script");
-    script.src = "https://checkout.flutterwave.com/v3.js";
-    script.async = true;
-    script.onload = openCheckout;
-    script.onerror = () => setDepositStatus({ loading: false, message: "Couldn't load the payment form — try again." });
-    document.body.appendChild(script);
+    try {
+      const token = await getValidToken();
+      if (!token) {
+        setShowAuthModal(true);
+        setDepositStatus({ loading: false, message: null });
+        return;
+      }
+      const res = await fetch("https://sireai.uk/pm-api/me/deposit/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ naira: depositAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDepositStatus({ loading: false, message: data.detail || "Couldn't start the deposit — try again." });
+        return;
+      }
+      // Full redirect to Bachs' hosted checkout page. It sends the user
+      // back to success_url/cancel_url (configured server-side) once
+      // they're done.
+      window.location.href = data.checkout_url;
+    } catch {
+      setDepositStatus({ loading: false, message: "Network error — try again." });
+    }
   };
 
   const handleFootballBuy = async () => {
@@ -1192,15 +1199,6 @@ const price = selectedFootballMarket
               <span className={`text-base font-bold ${t.textPrimary}`}>Deposit</span>
             </div>
 
-            <p className={`text-xs ${t.textMuted} mb-1.5`}>Email</p>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={depositEmail}
-              onChange={(e) => setDepositEmail(e.target.value)}
-              className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
-            />
-
             <p className={`text-xs ${t.textMuted} mb-1.5`}>Amount (₦)</p>
             <input
               type="number"
@@ -1217,7 +1215,7 @@ const price = selectedFootballMarket
               disabled={depositStatus.loading}
               className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}
             >
-              {depositStatus.loading ? "…" : `Pay ₦${depositAmount.toLocaleString()} with Flutterwave`}
+              {depositStatus.loading ? "…" : `Pay ₦${depositAmount.toLocaleString()} with Bachs`}
             </button>
             <p className={`text-[10px] ${t.textMuted} text-center mt-3`}>
               Your balance updates automatically once payment is confirmed — no need to refresh manually.
@@ -1431,5 +1429,4 @@ const price = selectedFootballMarket
       )}
     </div>
   );
-  
 }

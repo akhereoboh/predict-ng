@@ -136,7 +136,7 @@ const MARKETS = [
 const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
 
 export default function Home() {
-  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, logout, getValidToken, refreshPortfolio } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, logout, getValidToken, refreshPortfolio } = useTheme();
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
@@ -510,12 +510,14 @@ const price = selectedFootballMarket
             <div className="flex items-center gap-4 text-xs">
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
-                <span className="font-bold text-emerald-500 text-sm">$83.20</span>
+                <span className="font-bold text-emerald-500 text-sm">
+                  {isLoggedIn ? (totalValueNaira != null ? `${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                </span>
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {isLoggedIn ? (cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "$12.45"}
+                  {isLoggedIn ? (cashNaira != null ? `${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
                 </span>
               </div>
             </div>

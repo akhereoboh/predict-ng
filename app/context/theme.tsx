@@ -22,6 +22,7 @@ interface ThemeContextType {
   // --- real auth ---
   userId: string | null;
   cashNaira: number | null;
+  totalValueNaira: number | null;
   authError: string | null;
   authLoading: boolean;
   signup: (email: string, password: string, displayName?: string) => Promise<{ ok: boolean; needsEmailConfirm?: boolean }>;
@@ -164,6 +165,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const [userId, setUserId] = useState<string | null>(null);
   const [cashNaira, setCashNaira] = useState<number | null>(null);
+  const [totalValueNaira, setTotalValueNaira] = useState<number | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const sessionRef = useRef<StoredSession | null>(null);
@@ -189,6 +191,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (!res.ok) return;
       const data = await res.json();
       setCashNaira(data.cash_naira);
+      setTotalValueNaira(data.total_value_naira);
     } catch {
       // silent -- portfolio just won't update this tick, next call will retry
     }
@@ -335,6 +338,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setIsLoggedIn,
         userId,
         cashNaira,
+        totalValueNaira,
         authError,
         authLoading,
         signup,

@@ -29,13 +29,58 @@ type CreateResult = {
 };
 
 const CATEGORIES = ["FOOTBALL", "STOCKS", "POLITICS", "ECONOMY", "CRYPTO", "SPORTS"];
+const STOCK_SUBCATEGORIES = ["DAILY", "WEEKLY"];
 
 export default function AdminPage() {
-  const { t, isLoggedIn, getValidToken } = useTheme();
+  const { t, theme, isLoggedIn, login, authError, authLoading, getValidToken } = useTheme();
   const router = useRouter();
+
+  // --- password gate (separate from, and weaker than, the real
+  // security -- see the backend endpoint's docstring). Just keeps this
+  // page from being casually stumbled into. ---
+  const [pageUnlocked, setPageUnlocked] = useState(false);
+  const [pagePassword, setPagePassword] = useState("");
+  const [pagePasswordError, setPagePasswordError] = useState<string | null>(null);
+  const [checkingPassword, setCheckingPassword] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("eris_admin_unlocked") === "1") {
+      const id = requestAnimationFrame(() => setPageUnlocked(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, []);
+
+  const handleUnlock = async () => {
+    setCheckingPassword(true);
+    setPagePasswordError(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/verify-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pagePassword }),
+      });
+      if (!res.ok) {
+        setPagePasswordError("Wrong password.");
+        setCheckingPassword(false);
+        return;
+      }
+      sessionStorage.setItem("eris_admin_unlocked", "1");
+      setPageUnlocked(true);
+    } catch {
+      setPagePasswordError("Network error — try again.");
+    } finally {
+      setCheckingPassword(false);
+    }
+  };
+
+  // --- inline admin login (separate from whatever account you're
+  // currently signed in as elsewhere on the site) ---
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
 
   // --- create form state ---
   const [category, setCategory] = useState("FOOTBALL");
+  const [stockSubcategory, setStockSubcategory] = useState("DAILY");
   const [question, setQuestion] = useState("");
   const [closeAt, setCloseAt] = useState("");
   const [totalBudget, setTotalBudget] = useState(100000);
@@ -91,6 +136,7 @@ export default function AdminPage() {
       setCreateError("Pick a close time first.");
       return;
     }
+    const effectiveCategory = category === "STOCKS" ? `STOCKS_${stockSubcategory}` : category;
     setCreating(true);
     setCreateError(null);
     setCreateResult(null);
@@ -105,7 +151,7 @@ export default function AdminPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          category,
+          category: effectiveCategory,
           question: question.trim(),
           close_at: new Date(closeAt).toISOString(),
           total_budget_naira: totalBudget,
@@ -173,18 +219,73 @@ export default function AdminPage() {
     }
   };
 
+  // Gate 1: the page password (weak, just keeps this from being stumbled into)
+  if (!pageUnlocked) {
+    return (
+      <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans flex items-center justify-center px-4`}>
+        <div className={`${t.cardBg} border ${t.border} rounded-xl p-6 w-full max-w-xs shadow-sm`}>
+          <p className={`text-sm font-medium ${t.textPrimary} mb-3`}>Admin page password</p>
+          <input
+            type="password"
+            value={pagePassword}
+            onChange={(e) => setPagePassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
+            className={`w-full px-3 py-2.5 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+          />
+          {pagePasswordError && <p className="text-xs text-red-500 mb-3">{pagePasswordError}</p>}
+          <button
+            onClick={handleUnlock}
+            disabled={checkingPassword}
+            className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
+          >
+            {checkingPassword ? "…" : "Unlock"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate 2: an actual admin account -- signed in right here, regardless
+  // of whatever account (if any) is currently active elsewhere on the
+  // site. This is the REAL check -- every action still goes through
+  // require_admin() on the backend regardless of what happens here.
   if (!isLoggedIn) {
     return (
-      <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans flex items-center justify-center`}>
-        <div className="text-center">
-          <p className={`text-sm ${t.textMuted} mb-3`}>Sign in with your admin account first.</p>
-          <button onClick={() => router.push("/")} className={`text-sm px-4 py-2 rounded-lg ${t.accent} text-white cursor-pointer border-none`}>
+      <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans flex items-center justify-center px-4`}>
+        <div className={`${t.cardBg} border ${t.border} rounded-xl p-6 w-full max-w-xs shadow-sm`}>
+          <p className={`text-sm font-medium ${t.textPrimary} mb-3`}>Sign in with your admin account</p>
+          {authError && <p className="text-xs text-red-500 mb-2">{authError}</p>}
+          <input
+            type="email"
+            placeholder="Email"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            className={`w-full px-3 py-2.5 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-2`}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") login(adminEmail, adminPassword); }}
+            className={`w-full px-3 py-2.5 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+          />
+          <button
+            onClick={() => login(adminEmail, adminPassword)}
+            disabled={authLoading}
+            className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 mb-2 ${theme === "dark" ? "bg-white text-black" : "bg-black text-white"}`}
+          >
+            {authLoading ? "…" : "Log in"}
+          </button>
+          <button onClick={() => router.push("/")} className={`w-full text-xs ${t.textMuted} cursor-pointer border-none bg-transparent py-1`}>
             Back to Eris
           </button>
         </div>
       </div>
     );
   }
+
+  const effectiveCategory = category === "STOCKS" ? `STOCKS_${stockSubcategory}` : category;
 
   return (
     <div className={`min-h-screen ${t.pageBg} ${t.textPrimary} font-sans pb-16`}>
@@ -214,7 +315,34 @@ export default function AdminPage() {
                 ))}
               </select>
             </div>
-            <div>
+            {category === "STOCKS" ? (
+              <div>
+                <label className={`text-xs ${t.textMuted} block mb-1`}>Stock sub-category</label>
+                <select
+                  value={stockSubcategory}
+                  onChange={(e) => setStockSubcategory(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                >
+                  {STOCK_SUBCATEGORIES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className={`text-xs ${t.textMuted} block mb-1`}>Trading closes at</label>
+                <input
+                  type="datetime-local"
+                  value={closeAt}
+                  onChange={(e) => setCloseAt(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                />
+              </div>
+            )}
+          </div>
+
+          {category === "STOCKS" && (
+            <div className="mb-3">
               <label className={`text-xs ${t.textMuted} block mb-1`}>Trading closes at</label>
               <input
                 type="datetime-local"
@@ -223,7 +351,7 @@ export default function AdminPage() {
                 className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
               />
             </div>
-          </div>
+          )}
 
           <label className={`text-xs ${t.textMuted} block mb-1`}>Question</label>
           <input
@@ -236,7 +364,7 @@ export default function AdminPage() {
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label className={`text-xs ${t.textMuted} block mb-1`}>Total budget for {category} (₦)</label>
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Total budget for {effectiveCategory} (₦)</label>
               <input
                 type="number"
                 value={totalBudget}
@@ -245,7 +373,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <label className={`text-xs ${t.textMuted} block mb-1`}>Max concurrent {category} markets</label>
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Max concurrent {effectiveCategory} markets</label>
               <input
                 type="number"
                 value={maxConcurrent}

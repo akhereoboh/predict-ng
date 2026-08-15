@@ -133,11 +133,30 @@ const MARKETS = [
   },
 ];
 
-const FILTERS = ["All", "Politics", "Economy", "Sports", "Stocks", "Crypto"];
+// The old flat FILTERS list is gone -- categories are now fetched from the
+// real backend registry (see the useEffect below), so new categories and
+// sub-categories created from the admin page show up here automatically.
+type CategoryEntry = { name: string; parent: string | null };
 
 export default function Home() {
   const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, logout, getValidToken, refreshPortfolio } = useTheme();
+  const [categories, setCategories] = useState<CategoryEntry[]>([]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("https://sireai.uk/pm-api/categories")
+      .then((r) => r.json())
+      .then((data: CategoryEntry[]) => setCategories(data))
+      .catch(() => {
+        // categories row just won't show sub-pills; the top-level "All"
+        // browsing experience still works fine without this
+      });
+  }, []);
+
+  const topLevelCategories = categories.filter((c) => !c.parent).map((c) => c.name);
+  const subcategoriesForActive = categories.filter((c) => c.parent?.toUpperCase() === activeFilter.toUpperCase()).map((c) => c.name);
+
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
     id: string;
@@ -225,9 +244,7 @@ export default function Home() {
   const filtered =
     activeFilter === "All"
       ? MARKETS
-      : activeFilter === "Sports"
-      ? [] // real football markets render separately below, not the static mock list
-      : MARKETS.filter((m) => m.category === activeFilter);
+      : []; // any selected category shows REAL markets (below), never the static mock list
 
   const activeSide = hoverSide ?? side;
 const price = selectedFootballMarket
@@ -359,12 +376,18 @@ const price = selectedFootballMarket
   };
   type FootballTradeState = { loading: boolean; error: string | null; success: string | null };
 
+  // NOTE ON NAMING: these were built football-first and the names stuck --
+  // "footballMarkets" now actually holds whatever category is currently
+  // selected (Stocks, Politics, any category created from the admin
+  // page), not just football. Renaming everywhere would touch a lot of
+  // the panel logic below for no functional benefit, so the behavior was
+  // generalized in place instead.
   const [footballMarkets, setFootballMarkets] = useState<FootballMarket[]>([]);
   const [footballLoading, setFootballLoading] = useState(true);
   const [footballTradeStatus, setFootballTradeStatus] = useState<FootballTradeState>({ loading: false, error: null, success: null });
 
   useEffect(() => {
-    if (activeFilter !== "Sports") return;
+    if (activeFilter === "All") return;
     let cancelled = false;
     const fetchFootballMarkets = async () => {
       try {
@@ -372,8 +395,12 @@ const price = selectedFootballMarket
         if (!res.ok) return;
         const data: Omit<FootballMarket, "closed">[] = await res.json();
         const now = Date.now();
+        const cat = activeFilter.toUpperCase();
+        const sub = activeSubcategory?.toUpperCase();
+        const matches = (marketType: string) =>
+          sub ? marketType === `${cat}_${sub}` : marketType === cat || marketType.startsWith(`${cat}_`);
         const withClosed: FootballMarket[] = data
-          .filter((m) => m.market_type === "FOOTBALL")
+          .filter((m) => matches(m.market_type))
           .map((m) => ({
             ...m,
             closed: m.status !== "OPEN" || (!!m.close_at && new Date(m.close_at).getTime() <= now),
@@ -399,12 +426,13 @@ const price = selectedFootballMarket
       cancelled = true;
       clearInterval(id);
     };
-  }, [activeFilter]);
+  }, [activeFilter, activeSubcategory]);
 
-  // The panel only shows football mode while actually viewing Sports --
-  // switching filters away reverts it to the normal static-market panel.
+  // The panel only shows the real-market mode while actually viewing a
+  // real category -- switching to "All" reverts it to the normal
+  // static-market panel.
   useEffect(() => {
-    if (activeFilter === "Sports") return;
+    if (activeFilter !== "All") return;
     const id = requestAnimationFrame(() => setSelectedFootballMarket(null));
     return () => cancelAnimationFrame(id);
   }, [activeFilter]);
@@ -573,20 +601,51 @@ const price = selectedFootballMarket
             </svg>
             <span className="font-medium">Trending</span>
           </button>
-          {FILTERS.map((f) => (
+          {["All", ...topLevelCategories].map((f) => (
             <button
               key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`text-xs px-3 py-1 rounded-full border cursor-pointer transition-colors shrink-0 ${
+              onClick={() => { setActiveFilter(f); setActiveSubcategory(null); }}
+              className={`text-xs px-3 py-1 rounded-full border cursor-pointer transition-colors shrink-0 capitalize ${
                 activeFilter === f
                   ? `${t.filterActive} ${t.filterActiveBorder} ${t.filterActiveText} font-medium`
                   : `bg-transparent border-transparent ${t.textMuted} hover:${t.textPrimary}`
               }`}
             >
-              {f}
+              {f.charAt(0) + f.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
+
+        {/* SUB-CATEGORY ROW -- only appears once a category with real
+            sub-categories is selected, e.g. Sports -> Football, matching
+            how Polymarket lets you drill into a category. */}
+        {activeFilter !== "All" && subcategoriesForActive.length > 0 && (
+          <div className={`px-3 md:px-6 py-2 border-t ${t.borderLight} flex items-center gap-2 overflow-x-auto`}>
+            <button
+              onClick={() => setActiveSubcategory(null)}
+              className={`text-xs px-3 py-1 rounded-full border cursor-pointer transition-colors shrink-0 ${
+                activeSubcategory === null
+                  ? `${t.filterActive} ${t.filterActiveBorder} ${t.filterActiveText} font-medium`
+                  : `bg-transparent border-transparent ${t.textMuted} hover:${t.textPrimary}`
+              }`}
+            >
+              All {activeFilter.charAt(0) + activeFilter.slice(1).toLowerCase()}
+            </button>
+            {subcategoriesForActive.map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveSubcategory(s)}
+                className={`text-xs px-3 py-1 rounded-full border cursor-pointer transition-colors shrink-0 capitalize ${
+                  activeSubcategory === s
+                    ? `${t.filterActive} ${t.filterActiveBorder} ${t.filterActiveText} font-medium`
+                    : `bg-transparent border-transparent ${t.textMuted} hover:${t.textPrimary}`
+                }`}
+              >
+                {s.charAt(0) + s.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ROW 3: search */}
         <div className={`px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-3 md:px-6 py-2 border-t ${t.borderLight} flex items-center gap-2`}>
@@ -613,7 +672,7 @@ const price = selectedFootballMarket
       <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 pb-20">
         {/* LEFT */}
         <div className="flex flex-col gap-3 w-full">
-          {(activeFilter === "All" || activeFilter === "Crypto") && (() => {
+          {(activeFilter === "All" || activeFilter === "CRYPTO") && (() => {
             const yes = btcLive?.price_yes ?? 50;
             const no = btcLive?.price_no ?? 50;
             const mins = btcSecondsLeft != null ? Math.floor(btcSecondsLeft / 60) : null;
@@ -718,29 +777,11 @@ const price = selectedFootballMarket
             );
           })()}
 
-          {activeFilter === "All" && (
-            <div
-              onClick={() => router.push("/football")}
-              className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white text-lg shrink-0">⚽</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${t.textPrimary}`}>Football Markets</p>
-                  <p className={`text-xs ${t.textMuted} mt-0.5`}>Real matches, real trades — pick a side and bet on the outcome</p>
-                </div>
-                <svg className={`w-4 h-4 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          )}
-
-          {activeFilter === "Sports" && (
+          {activeFilter !== "All" && (
             <>
-              {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading football markets…</p>}
+              {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading markets…</p>}
               {!footballLoading && footballMarkets.filter((m) => !m.closed).length === 0 && (
-                <p className={`text-sm ${t.textMuted}`}>No football markets open right now. Check back soon.</p>
+                <p className={`text-sm ${t.textMuted}`}>No markets open in this category right now. Check back soon.</p>
               )}
               {footballMarkets.filter((m) => !m.closed).map((m) => {
                 const isSelected = selectedFootballMarket?.id === m.id;

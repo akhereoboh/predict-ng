@@ -172,6 +172,7 @@ export default function Home() {
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
   const [panelKey, setPanelKey] = useState(0);
   const [panelVisible, setPanelVisible] = useState(true);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -194,6 +195,14 @@ export default function Home() {
     trader_count: number | null;
   } | null>(null);
   const router = useRouter();
+
+  // The right-side trade panel only exists on desktop (hidden md:flex --
+  // there's no room for it on a phone screen). Without this check, tapping
+  // "Buy YES/NO" on mobile was updating panel state that literally
+  // nothing on screen displays -- the tap visibly did nothing. On mobile,
+  // the same tap instead sends you to the market's own page, which has a
+  // real, working, mobile-native fixed bottom trade bar.
+  const isMobileViewport = () => typeof window !== "undefined" && window.innerWidth < 768;
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
   const cardEls = useRef<HTMLDivElement[]>([]);
@@ -385,6 +394,14 @@ const price = selectedFootballMarket
   const [footballMarkets, setFootballMarkets] = useState<FootballMarket[]>([]);
   const [footballLoading, setFootballLoading] = useState(true);
   const [footballTradeStatus, setFootballTradeStatus] = useState<FootballTradeState>({ loading: false, error: null, success: null });
+
+  // Auto-close the mobile trade sheet a moment after a successful trade --
+  // long enough for the "Bought X for ₦Y" confirmation to actually be seen.
+  useEffect(() => {
+    if (!mobileSheetOpen || !footballTradeStatus.success) return;
+    const id = setTimeout(() => setMobileSheetOpen(false), 1800);
+    return () => clearTimeout(id);
+  }, [mobileSheetOpen, footballTradeStatus.success]);
 
   useEffect(() => {
     if (activeFilter === "All") return;
@@ -786,6 +803,14 @@ const price = selectedFootballMarket
               {footballMarkets.filter((m) => !m.closed).map((m) => {
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
+                  if (isMobileViewport()) {
+                    setSelectedFootballMarket(m);
+                    setSide(pickSide);
+                    setAmount(0);
+                    setFootballTradeStatus({ loading: false, error: null, success: null });
+                    setMobileSheetOpen(true);
+                    return;
+                  }
                   setPanelVisible(false);
                   requestAnimationFrame(() => {
                     setSelectedFootballMarket(m);
@@ -914,7 +939,7 @@ const price = selectedFootballMarket
                       <span className={`text-xs font-medium ${t.textSecondary} w-36 shrink-0`}>{opt.name}</span>
                       <div className="flex gap-2 ml-auto">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=YES`); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
                           onMouseEnter={() => setHoverSide("YES")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -926,7 +951,7 @@ const price = selectedFootballMarket
                           Yes {(opt.yesPrice * 100).toFixed(0)}¢
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=NO`); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
                           onMouseEnter={() => setHoverSide("NO")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -960,7 +985,7 @@ const price = selectedFootballMarket
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=YES`); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
                       onMouseEnter={() => setHoverSide("YES")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -972,7 +997,7 @@ const price = selectedFootballMarket
                       Buy YES · {Math.round(market.yesPrice * 100)}¢
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=NO`); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
                       onMouseEnter={() => setHoverSide("NO")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -1230,6 +1255,101 @@ const price = selectedFootballMarket
           </div>
         </div>
       )}
+    {/* MOBILE TRADE SHEET -- slides up in place instead of navigating away,
+        matching the reference UX (Buy pill, big editable amount, Yes/No
+        toggle, live "To win" total, quick-amount chips, one Trade button).
+        Reuses the exact same state/handleFootballBuy() the desktop panel
+        already uses -- same trade logic, already proven working with real
+        money, just a different container. */}
+      {mobileSheetOpen && selectedFootballMarket && (() => {
+        const priceFraction = (side === "YES" ? selectedFootballMarket.price_yes : selectedFootballMarket.price_no) / 100;
+        const estContracts = priceFraction > 0 && amount > 0 ? Math.max(1, Math.round(amount / priceFraction)) : 0;
+        const toWin = estContracts * 100;
+        return (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSheetOpen(false)} />
+            <div className={`absolute bottom-0 left-0 right-0 ${t.cardBg} rounded-t-2xl pb-6 px-4 pt-3 shadow-2xl`}>
+              <div className={`w-10 h-1 rounded-full mx-auto mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
+
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${t.inputBg} ${t.textPrimary}`}>Buy</span>
+                <button onClick={() => setMobileSheetOpen(false)} className={`w-7 h-7 rounded-full flex items-center justify-center ${t.inputBg} ${t.textMuted} cursor-pointer border-none`}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{selectedFootballMarket.question}</p>
+              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? "text-green-500" : "text-red-500"}`}>{side}</p>
+
+              <div className="flex items-center justify-center mb-4">
+                <span className={`text-4xl font-bold ${t.textMuted}`}>₦</span>
+                <input
+                  type="number"
+                  value={amount || ""}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  placeholder="0"
+                  className={`text-4xl font-bold bg-transparent outline-none text-center w-40 ${t.textPrimary}`}
+                  autoFocus
+                />
+              </div>
+
+              <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
+                <button
+                  onClick={() => setSide("YES")}
+                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                    side === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setSide("NO")}
+                  className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                    side === "NO" ? "bg-red-500 text-white" : `${t.inputBg} ${t.textMuted}`
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+
+              {amount > 0 && (
+                <p className="text-center text-sm mb-4">
+                  <span className={t.textMuted}>To win </span>
+                  <span className="font-bold text-green-500">₦{toWin.toLocaleString()}</span>
+                </p>
+              )}
+
+              <div className="flex gap-2 mb-4">
+                {[100, 500, 1000, 5000].map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAmount((prev) => prev + a)}
+                    className={`flex-1 text-xs py-2 rounded-lg border ${t.border} ${t.textPrimary} cursor-pointer bg-transparent`}
+                  >
+                    +₦{a}
+                  </button>
+                ))}
+              </div>
+
+              {footballTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{footballTradeStatus.error}</p>}
+              {footballTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{footballTradeStatus.success}</p>}
+
+              <button
+                onClick={async () => {
+                  if (!isLoggedIn) { setShowAuthModal(true); return; }
+                  await handleFootballBuy();
+                }}
+                disabled={footballTradeStatus.loading || amount <= 0}
+                className="w-full py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+              >
+                {!isLoggedIn ? "Sign in to trade" : footballTradeStatus.loading ? "…" : "Trade"}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     {/* DEPOSIT MODAL */}
       {showDepositModal && (
         <div

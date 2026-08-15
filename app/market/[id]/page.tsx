@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTheme } from "../../context/theme";
 import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 
@@ -223,6 +223,13 @@ export default function MarketPage() {
   const market = MARKETS.find((m) => m.id === id) || MARKETS[0];
 
   const [side, setSide] = useState<"YES" | "NO">("YES");
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const requestedSide = searchParams.get("side");
+    if (requestedSide !== "YES" && requestedSide !== "NO") return;
+    const id = requestAnimationFrame(() => setSide(requestedSide));
+    return () => cancelAnimationFrame(id);
+  }, [searchParams]);
   const [amount, setAmount] = useState(5);
   const [period, setPeriod] = useState("1W");
   const [orderBookOpen, setOrderBookOpen] = useState(false);

@@ -2,6 +2,7 @@
 
 
 import { useRouter } from "next/navigation";
+import RollingNumber from "./components/RollingNumber";
 import { useTheme } from "./context/theme";
 import { useState, useRef, useEffect } from "react";
 
@@ -803,22 +804,11 @@ const price = selectedFootballMarket
               {footballMarkets.filter((m) => !m.closed).map((m) => {
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
-                  if (isMobileViewport()) {
-                    setSelectedFootballMarket(m);
-                    setSide(pickSide);
-                    setAmount(0);
-                    setFootballTradeStatus({ loading: false, error: null, success: null });
-                    setMobileSheetOpen(true);
-                    return;
-                  }
-                  setPanelVisible(false);
-                  requestAnimationFrame(() => {
-                    setSelectedFootballMarket(m);
-                    setSide(pickSide);
-                    setAmount(10);
-                    setPanelKey((k) => k + 1);
-                    setPanelVisible(true);
-                  });
+                  setSelectedFootballMarket(m);
+                  setSide(pickSide);
+                  setAmount(0);
+                  setFootballTradeStatus({ loading: false, error: null, success: null });
+                  setMobileSheetOpen(true);
                 };
                 return (
                   <div
@@ -1094,7 +1084,14 @@ const price = selectedFootballMarket
               <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
               <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
                 <span>Payout if {side}</span>
-                <span className={theme === "dark" && activeSide === "YES" ? "text-green-400" : theme === "dark" && activeSide === "NO" ? "text-red-400" : t.payoutText}>${payout.toFixed(2)}</span>
+                <RollingNumber
+                  text={`$${payout.toFixed(2)}`}
+                  color={
+                    theme === "dark"
+                      ? activeSide === "YES" ? "#4ADE80" : activeSide === "NO" ? "#F87171" : "#CCFF00"
+                      : "#2563EB"
+                  }
+                />
               </div>
             </div>
 
@@ -1266,9 +1263,9 @@ const price = selectedFootballMarket
         const estContracts = priceFraction > 0 && amount > 0 ? Math.max(1, Math.round(amount / priceFraction)) : 0;
         const toWin = estContracts * 100;
         return (
-          <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSheetOpen(false)} />
-            <div className={`absolute bottom-0 left-0 right-0 ${t.cardBg} rounded-t-2xl pb-6 px-4 pt-3 shadow-2xl`}>
+            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-6 md:w-full md:max-w-sm ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-6 px-4 pt-3 shadow-2xl`}>
               <div className={`w-10 h-1 rounded-full mx-auto mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
 
               <div className="flex items-center justify-between mb-4">
@@ -1315,9 +1312,9 @@ const price = selectedFootballMarket
               </div>
 
               {amount > 0 && (
-                <p className="text-center text-sm mb-4">
-                  <span className={t.textMuted}>To win </span>
-                  <span className="font-bold text-green-500">₦{toWin.toLocaleString()}</span>
+                <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
+                  <span className={t.textMuted}>To win</span>
+                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color="#22C55E" className="font-bold text-sm" />
                 </p>
               )}
 

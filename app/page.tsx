@@ -999,7 +999,7 @@ const price = selectedFootballMarket
         </div>
 
         {/* RIGHT — TRADE PANEL */}
-        <div className="hidden md:flex flex-col gap-4 sticky top-32 self-start">
+        <div className={`${mobileSheetOpen ? "hidden" : "hidden md:flex"} flex-col gap-4 sticky top-32 self-start`}>
           <div key={panelKey} className={`pop-in ${t.cardBg} rounded-xl p-4 shadow-sm transition-all duration-200 border ${
               theme === "dark"
                 ? activeSide === "YES" ? "border-green-500/60" : activeSide === "NO" ? "border-red-500/60" : t.border

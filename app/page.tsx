@@ -251,10 +251,11 @@ export default function Home() {
     observerRef.current.observe(el);
   };
 
-  const filtered =
-    activeFilter === "All"
-      ? MARKETS
-      : []; // any selected category shows REAL markets (below), never the static mock list
+  // The static MARKETS array is retired from display -- every category,
+  // including All, now shows real markets from the backend (below).
+  // MARKETS itself is left in the file since other pages (market/[id])
+  // still reference it for their own static-market fallback behavior.
+  const filtered: typeof MARKETS = [];
 
   const activeSide = hoverSide ?? side;
 const price = selectedFootballMarket
@@ -398,7 +399,6 @@ const price = selectedFootballMarket
   }, [mobileSheetOpen, footballTradeStatus.success]);
 
   useEffect(() => {
-    if (activeFilter === "All") return;
     let cancelled = false;
     const fetchFootballMarkets = async () => {
       try {
@@ -408,8 +408,11 @@ const price = selectedFootballMarket
         const now = Date.now();
         const cat = activeFilter.toUpperCase();
         const sub = activeSubcategory?.toUpperCase();
-        const matches = (marketType: string) =>
-          sub ? marketType === `${cat}_${sub}` : marketType === cat || marketType.startsWith(`${cat}_`);
+        const matches = (marketType: string) => {
+          if (marketType === "BTC_5MIN") return false; // already shown via its own dedicated live card
+          if (activeFilter === "All") return true; // every other real market, unfiltered by category
+          return sub ? marketType === `${cat}_${sub}` : marketType === cat || marketType.startsWith(`${cat}_`);
+        };
         const withClosed: FootballMarket[] = data
           .filter((m) => matches(m.market_type))
           .map((m) => ({
@@ -438,15 +441,6 @@ const price = selectedFootballMarket
       clearInterval(id);
     };
   }, [activeFilter, activeSubcategory]);
-
-  // The panel only shows the real-market mode while actually viewing a
-  // real category -- switching to "All" reverts it to the normal
-  // static-market panel.
-  useEffect(() => {
-    if (activeFilter !== "All") return;
-    const id = requestAnimationFrame(() => setSelectedFootballMarket(null));
-    return () => cancelAnimationFrame(id);
-  }, [activeFilter]);
 
   // Asks the backend to start a real Bachs checkout session, then sends
   // the browser to Bachs' hosted payment page. Money is NEVER credited
@@ -788,13 +782,12 @@ const price = selectedFootballMarket
             );
           })()}
 
-          {activeFilter !== "All" && (
-            <>
-              {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading markets…</p>}
-              {!footballLoading && footballMarkets.filter((m) => !m.closed).length === 0 && (
-                <p className={`text-sm ${t.textMuted}`}>No markets open in this category right now. Check back soon.</p>
-              )}
-              {footballMarkets.filter((m) => !m.closed).map((m) => {
+          <>
+            {footballLoading && <p className={`text-sm ${t.textMuted}`}>Loading markets…</p>}
+            {!footballLoading && footballMarkets.filter((m) => !m.closed).length === 0 && (
+              <p className={`text-sm ${t.textMuted}`}>No markets open right now. Check back soon.</p>
+            )}
+            {footballMarkets.filter((m) => !m.closed).map((m) => {
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
                   setSelectedFootballMarket(m);
@@ -864,7 +857,6 @@ const price = selectedFootballMarket
                 );
               })}
             </>
-          )}
 
           {filtered.map((market, i) => (
             <div
@@ -922,7 +914,7 @@ const price = selectedFootballMarket
                       <span className={`text-xs font-medium ${t.textSecondary} w-36 shrink-0`}>{opt.name}</span>
                       <div className="flex gap-2 ml-auto">
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=YES`); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
                           onMouseEnter={() => setHoverSide("YES")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -934,7 +926,7 @@ const price = selectedFootballMarket
                           Yes {(opt.yesPrice * 100).toFixed(0)}¢
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=NO`); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
                           onMouseEnter={() => setHoverSide("NO")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -968,7 +960,7 @@ const price = selectedFootballMarket
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=YES`); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
                       onMouseEnter={() => setHoverSide("YES")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -980,7 +972,7 @@ const price = selectedFootballMarket
                       Buy YES · {Math.round(market.yesPrice * 100)}¢
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { router.push(`/market/${market.id}?side=NO`); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
                       onMouseEnter={() => setHoverSide("NO")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -1248,13 +1240,15 @@ const price = selectedFootballMarket
     {/* MOBILE TRADE SHEET -- slides up in place instead of navigating away,
         matching the reference UX (Buy pill, big editable amount, Yes/No
         toggle, live "To win" total, quick-amount chips, one Trade button).
-        Reuses the exact same state/handleFootballBuy() the desktop panel
-        already uses -- same trade logic, already proven working with real
-        money, just a different container. */}
-      {mobileSheetOpen && selectedFootballMarket && (() => {
-        const priceFraction = (side === "YES" ? selectedFootballMarket.price_yes : selectedFootballMarket.price_no) / 100;
-        const estContracts = priceFraction > 0 && amount > 0 ? Math.max(1, Math.round(amount / priceFraction)) : 0;
-        const toWin = estContracts * 100;
+        Works for BOTH real markets (selectedFootballMarket set -- real
+        trade execution via handleFootballBuy, same as before) and static
+        markets (selectedFootballMarket null -- matches the desktop
+        panel's existing behavior for these, no real backend call since
+        there's nothing real to execute). Reuses the page's existing
+        top-level `price`/`payout` calc, which already handles both cases
+        correctly -- not a second, possibly-inconsistent calculation. */}
+      {mobileSheetOpen && (() => {
+        const questionText = selectedFootballMarket ? selectedFootballMarket.question : selectedMarket.question;
         return (
           <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSheetOpen(false)} />
@@ -1270,7 +1264,7 @@ const price = selectedFootballMarket
                 </button>
               </div>
 
-              <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{selectedFootballMarket.question}</p>
+              <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{questionText}</p>
               <p className={`text-sm font-semibold mb-4 ${side === "YES" ? "text-green-500" : "text-red-500"}`}>{side}</p>
 
               <div className="flex items-center justify-center mb-4">
@@ -1307,7 +1301,7 @@ const price = selectedFootballMarket
               {amount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color="#22C55E" className="font-bold text-sm" />
+                  <RollingNumber text={`₦${payout.toFixed(2)}`} color="#22C55E" className="font-bold text-sm" />
                 </p>
               )}
 
@@ -1323,18 +1317,20 @@ const price = selectedFootballMarket
                 ))}
               </div>
 
-              {footballTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{footballTradeStatus.error}</p>}
-              {footballTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{footballTradeStatus.success}</p>}
+              {selectedFootballMarket && footballTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{footballTradeStatus.error}</p>}
+              {selectedFootballMarket && footballTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{footballTradeStatus.success}</p>}
 
               <button
                 onClick={async () => {
                   if (!isLoggedIn) { setShowAuthModal(true); return; }
-                  await handleFootballBuy();
+                  if (selectedFootballMarket) { await handleFootballBuy(); }
+                  // static markets have no real backend to execute against --
+                  // same placeholder behavior the desktop panel already has
                 }}
-                disabled={footballTradeStatus.loading || amount <= 0}
+                disabled={(selectedFootballMarket ? footballTradeStatus.loading : false) || amount <= 0}
                 className="w-full py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
               >
-                {!isLoggedIn ? "Sign in to trade" : footballTradeStatus.loading ? "…" : "Trade"}
+                {!isLoggedIn ? "Sign in to trade" : selectedFootballMarket && footballTradeStatus.loading ? "…" : "Trade"}
               </button>
             </div>
           </div>

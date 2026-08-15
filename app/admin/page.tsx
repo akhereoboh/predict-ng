@@ -577,9 +577,15 @@ export default function AdminPage() {
             </div>
           )}
 
+          {(addingCategory || addingSubcategory) && (
+            <p className="text-xs text-amber-500 mb-2">
+              Finish adding the new {addingCategory ? "category" : "sub-category"} first — click &quot;Add&quot; or &quot;×&quot; above before creating a market.
+            </p>
+          )}
+
           <button
             onClick={handleCreate}
-            disabled={creating}
+            disabled={creating || addingCategory || addingSubcategory}
             className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
           >
             {creating ? "…" : entries.filter((e) => e.question.trim() && e.closeAt).length > 1 ? `Create ${entries.filter((e) => e.question.trim() && e.closeAt).length} markets` : "Create market"}

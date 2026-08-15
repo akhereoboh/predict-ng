@@ -309,31 +309,24 @@ const price = selectedFootballMarket
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    const poll = async () => {
+    const es = new EventSource("https://sireai.uk/pm-api/markets/btc/stream");
+    es.onmessage = (event) => {
       try {
-        const res = await fetch("https://sireai.uk/pm-api/markets/btc/live", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) {
-          setBtcLive({
-            price_yes: data.price_yes,
-            price_no: data.price_no,
-            cycle_ends_at: data.cycle_ends_at,
-            volume_naira: data.volume_naira,
-            trader_count: data.trader_count,
-          });
-        }
+        const data = JSON.parse(event.data);
+        setBtcLive({
+          price_yes: data.price_yes,
+          price_no: data.price_no,
+          cycle_ends_at: data.cycle_ends_at,
+          volume_naira: data.volume_naira,
+          trader_count: data.trader_count,
+        });
       } catch {
-        // silently skip a failed tick -- the card just shows the last good value
+        // malformed message on one tick -- ignore, the next one will be fine
       }
     };
-    poll();
-    const interval = setInterval(poll, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+    // EventSource reconnects automatically on a dropped connection -- no
+    // manual retry loop needed, unlike the old REST-polling approach.
+    return () => es.close();
   }, []);
 
   const [btcSecondsLeft, setBtcSecondsLeft] = useState<number | null>(null);

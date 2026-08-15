@@ -603,7 +603,7 @@ export default function BtcLive() {
             </div>
 
             <div className="flex justify-between items-center mb-2">
-              <span className={`text-xs ${t.textMuted}`}>${amount}.00 cash</span>
+              <span className={`text-xs ${t.textMuted}`}>{amount}.00e cash</span>
               <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
                 {editing ? "Done" : "Edit"}
               </button>
@@ -636,9 +636,9 @@ export default function BtcLive() {
                         : `${t.inputBg} ${t.textPrimary}`
                     }`}
                   >
-                    <span className="text-sm font-bold">${a}</span>
+                    <span className="text-sm font-bold">{a}e</span>
                     <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-green-500"}`}>
-                      win ${price > 0 ? (a / price).toFixed(0) : "0"}¢
+                      win {price > 0 ? (a / price).toFixed(0) : "0"}e
                     </span>
                   </button>
                 ))}
@@ -647,7 +647,7 @@ export default function BtcLive() {
 
             <div className="text-center py-1">
               <span className={`text-xs ${t.textMuted}`}>Potential win if {side === "YES" ? "Up" : "Down"}: </span>
-              <span className={`text-sm font-bold ${t.accentText}`}>${payout}</span>
+              <span className={`text-sm font-bold ${t.accentText}`}>{payout}e</span>
               <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
             </div>
 

@@ -76,7 +76,7 @@ const SPARK_UP = "M2 22 L10 18 L18 19 L26 12 L34 14 L42 6 L50 2";
 const SPARK_DOWN = "M2 2 L10 6 L18 5 L26 12 L34 10 L42 18 L50 22";
 
 export default function Breaking() {
-  const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn, cashNaira, totalValueNaira } = useTheme();
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -120,11 +120,15 @@ export default function Breaking() {
             <div className="flex items-center gap-4 text-xs">
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
-                <span className="font-bold text-emerald-500 text-sm">$83.20</span>
+                <span className="font-bold text-emerald-500 text-sm">
+                  {isLoggedIn ? (totalValueNaira != null ? `${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                </span>
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
-                <span className="font-bold text-emerald-500 text-sm">$12.45</span>
+                <span className="font-bold text-emerald-500 text-sm">
+                  {isLoggedIn ? (cashNaira != null ? `${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                </span>
               </div>
             </div>
             <button

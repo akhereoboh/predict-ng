@@ -743,11 +743,11 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(yes)}¢`} color={theme === "dark" ? "#4ADE80" : "#2563EB"} className="text-base font-bold" />
+                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#4ADE80" : "#2563EB"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(no)}¢`} color={theme === "dark" ? "#EF4444" : "#6B0D0D"} className="text-base font-bold" />
+                      <RollingNumber text={`${Math.round(no)}e`} color={theme === "dark" ? "#EF4444" : "#6B0D0D"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
@@ -765,7 +765,7 @@ const price = selectedFootballMarket
                         : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                     }`}
                   >
-                    Buy Up · {Math.round(yes)}¢
+                    Buy Up · {Math.round(yes)}e
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
@@ -775,7 +775,7 @@ const price = selectedFootballMarket
                         : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                     }`}
                   >
-                    Buy Down · {Math.round(no)}¢
+                    Buy Down · {Math.round(no)}e
                   </button>
                 </div>
               </div>
@@ -830,11 +830,11 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${m.price_yes.toFixed(0)}¢`} color="#22C55E" className="text-base font-bold" />
+                          <RollingNumber text={`${m.price_yes.toFixed(0)}e`} color="#22C55E" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${m.price_no.toFixed(0)}¢`} color="#EF4444" className="text-base font-bold" />
+                          <RollingNumber text={`${m.price_no.toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
@@ -854,7 +854,7 @@ const price = selectedFootballMarket
                             : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                         }`}
                       >
-                        Buy YES · {m.price_yes.toFixed(0)}¢
+                        Buy YES · {m.price_yes.toFixed(0)}e
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
@@ -866,7 +866,7 @@ const price = selectedFootballMarket
                             : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                         }`}
                       >
-                        Buy NO · {m.price_no.toFixed(0)}¢
+                        Buy NO · {m.price_no.toFixed(0)}e
                       </button>
                     </div>
                   </div>
@@ -939,7 +939,7 @@ const price = selectedFootballMarket
                               : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                           }`}
                         >
-                          Yes {(opt.yesPrice * 100).toFixed(0)}¢
+                          Yes {(opt.yesPrice * 100).toFixed(0)}e
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
@@ -951,7 +951,7 @@ const price = selectedFootballMarket
                               : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                           }`}
                         >
-                          No {(opt.noPrice * 100).toFixed(0)}¢
+                          No {(opt.noPrice * 100).toFixed(0)}e
                         </button>
                       </div>
                     </div>
@@ -962,11 +962,11 @@ const price = selectedFootballMarket
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(market.yesPrice * 100)}¢</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(market.yesPrice * 100)}e</span>
                         <span className={`text-xs ${t.textMuted}`}>YES</span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(market.noPrice * 100)}¢</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(market.noPrice * 100)}e</span>
                         <span className={`text-xs ${t.textMuted}`}>NO</span>
                       </div>
                     </div>
@@ -985,7 +985,7 @@ const price = selectedFootballMarket
                           : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                       }`}
                     >
-                      Buy YES · {Math.round(market.yesPrice * 100)}¢
+                      Buy YES · {Math.round(market.yesPrice * 100)}e
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
@@ -997,7 +997,7 @@ const price = selectedFootballMarket
                           : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                       }`}
                     >
-                      Buy NO · {Math.round(market.noPrice * 100)}¢
+                      Buy NO · {Math.round(market.noPrice * 100)}e
                     </button>
                   </div>
                 </>
@@ -1041,13 +1041,13 @@ const price = selectedFootballMarket
 
             <p className={`text-xs ${theme === "dark" ? "text-white/80" : t.textMuted} mb-1.5`}>Amount</p>
             <div className={`flex items-center gap-2 ${t.inputBg} border ${t.border} rounded-lg px-3 h-10 mb-2`}>
-              <span className="text-sm font-bold text-green-400 shrink-0">$</span>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
                 className={`bg-transparent text-sm ${t.textPrimary} outline-none flex-1 text-right`}
               />
+              <span className="text-sm font-bold text-green-400 shrink-0">e</span>
             </div>
 
             <div className="grid grid-cols-4 gap-1.5 mb-4">
@@ -1067,7 +1067,7 @@ const price = selectedFootballMarket
                       : `border border-white/20 bg-[#080808] text-white`
                   }`}
                 >
-                  ${a}
+                  {a}e
                 </button>
               ))}
             </div>
@@ -1075,19 +1075,19 @@ const price = selectedFootballMarket
             <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>{side} price</span>
-                <RollingNumber text={`$${price.toFixed(2)} per contract`} color={theme === "dark" ? "#B0B0B0" : "#64748B"} />
+                <RollingNumber text={`${price.toFixed(2)}e per contract`} color={theme === "dark" ? "#B0B0B0" : "#64748B"} />
               </div>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>Contracts</span><span>{contracts}</span>
               </div>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
-                <span>Fee (2%)</span><span>${fee}</span>
+                <span>Fee (2%)</span><span>{fee}e</span>
               </div>
               <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
               <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
                 <span>Payout if {side}</span>
                 <RollingNumber
-                  text={`$${payout.toFixed(2)}`}
+                  text={`${payout.toFixed(2)}e`}
                   color={
                     theme === "dark"
                       ? activeSide === "YES" ? "#4ADE80" : activeSide === "NO" ? "#F87171" : "#CCFF00"
@@ -1132,9 +1132,9 @@ const price = selectedFootballMarket
             <p className={`text-xs font-medium ${theme === "dark" ? "text-white/80" : t.textMuted} uppercase tracking-widest mb-3`}>Your positions</p>
             <div className="flex flex-col gap-2">
               {[
-                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+84¢", up: true },
-                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+32¢", up: true },
-                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−120¢", up: false },
+                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+84e", up: true },
+                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+32e", up: true },
+                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−120e", up: false },
               ].map((pos) => (
                 <div key={pos.label} className={`flex items-center justify-between py-1.5 border-b ${t.borderLight} last:border-0`}>
                   <div>

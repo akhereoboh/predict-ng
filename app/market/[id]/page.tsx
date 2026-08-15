@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTheme } from "../../context/theme";
 import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
+import RollingNumber from "../../components/RollingNumber";
 
 const MARKETS = [
   {
@@ -485,7 +486,11 @@ export default function MarketPage() {
           {/* CHANCE */}
           <div className="flex items-center gap-3 mb-4">
             <div>
-              <div className={`text-3xl font-bold ${t.textPrimary}`}>{realMarket ? realMarket.price_yes.toFixed(0) : "—"}%</div>
+              {realMarket ? (
+                <RollingNumber text={`${realMarket.price_yes.toFixed(0)}%`} color={theme === "dark" ? "#FFFFFF" : "#000000"} className="text-3xl font-bold" />
+              ) : (
+                <div className={`text-3xl font-bold ${t.textPrimary}`}>—</div>
+              )}
               <div className={`text-xs ${t.textMuted} uppercase tracking-wide`}>Chance</div>
             </div>
             {realIsClosed && (

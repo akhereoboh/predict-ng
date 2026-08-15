@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/theme";
 import { useEffect, useState } from "react";
+import RollingNumber from "../components/RollingNumber";
 
 const API_BASE = "https://sireai.uk/pm-api";
 
@@ -202,11 +203,11 @@ export default function Football() {
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <span className="text-base font-bold text-green-500">{m.price_yes.toFixed(1)}%</span>
+                      <RollingNumber text={`${m.price_yes.toFixed(1)}%`} color="#22C55E" className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>YES</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-base font-bold text-red-500">{m.price_no.toFixed(1)}%</span>
+                      <RollingNumber text={`${m.price_no.toFixed(1)}%`} color="#EF4444" className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>NO</span>
                     </div>
                   </div>

@@ -743,16 +743,16 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(yes)}¢</span>
+                      <RollingNumber text={`${Math.round(yes)}¢`} color={theme === "dark" ? "#4ADE80" : "#2563EB"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(no)}¢</span>
+                      <RollingNumber text={`${Math.round(no)}¢`} color={theme === "dark" ? "#EF4444" : "#6B0D0D"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
                   <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
-                    <div className={`h-full rounded-full ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
                   </div>
                 </div>
 
@@ -790,6 +790,22 @@ const price = selectedFootballMarket
             {footballMarkets.filter((m) => !m.closed).map((m) => {
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
+                  // On the All page specifically, desktop uses the
+                  // persistent side panel (better for browsing many
+                  // markets across every category at once) -- every other
+                  // case (any specific category, or any screen on mobile)
+                  // uses the sheet.
+                  if (activeFilter === "All" && !isMobileViewport()) {
+                    setPanelVisible(false);
+                    requestAnimationFrame(() => {
+                      setSelectedFootballMarket(m);
+                      setSide(pickSide);
+                      setAmount(10);
+                      setPanelKey((k) => k + 1);
+                      setPanelVisible(true);
+                    });
+                    return;
+                  }
                   setSelectedFootballMarket(m);
                   setSide(pickSide);
                   setAmount(0);
@@ -814,16 +830,16 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <span className="text-base font-bold text-green-500">{m.price_yes.toFixed(0)}¢</span>
+                          <RollingNumber text={`${m.price_yes.toFixed(0)}¢`} color="#22C55E" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <span className="text-base font-bold text-red-500">{m.price_no.toFixed(0)}¢</span>
+                          <RollingNumber text={`${m.price_no.toFixed(0)}¢`} color="#EF4444" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
                       <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className="h-full bg-green-500" style={{ width: `${m.price_yes}%` }} />
+                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${m.price_yes}%` }} />
                       </div>
                     </div>
 
@@ -1058,7 +1074,8 @@ const price = selectedFootballMarket
 
             <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
-                <span>{side} price</span><span>${price.toFixed(2)} per contract</span>
+                <span>{side} price</span>
+                <RollingNumber text={`$${price.toFixed(2)} per contract`} color={theme === "dark" ? "#B0B0B0" : "#64748B"} />
               </div>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>Contracts</span><span>{contracts}</span>

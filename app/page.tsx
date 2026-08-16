@@ -166,6 +166,18 @@ export default function Home() {
   const [panelKey, setPanelKey] = useState(0);
   const [panelVisible, setPanelVisible] = useState(true);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  // --- multi-outcome markets (3+ named outcomes) -- separate state from
+  // the binary sheet above. A binary market always has exactly two sides
+  // to toggle between; a multi-outcome market doesn't have a natural
+  // "other side" the same way, so each outcome gets its own buy button
+  // that opens this sheet already locked to that outcome, with a small
+  // switcher inside if they change their mind. ---
+  const [multiSheetOpen, setMultiSheetOpen] = useState(false);
+  const [selectedMultiMarket, setSelectedMultiMarket] = useState<FootballMarket | null>(null);
+  const [selectedMultiOutcome, setSelectedMultiOutcome] = useState<string | null>(null);
+  const [multiAmount, setMultiAmount] = useState(0);
+  const [multiTradeStatus, setMultiTradeStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -392,6 +404,12 @@ const price = selectedFootballMarket
   }, [mobileSheetOpen, footballTradeStatus.success]);
 
   useEffect(() => {
+    if (!multiSheetOpen || !multiTradeStatus.success) return;
+    const id = setTimeout(() => setMultiSheetOpen(false), 1800);
+    return () => clearTimeout(id);
+  }, [multiSheetOpen, multiTradeStatus.success]);
+
+  useEffect(() => {
     let cancelled = false;
     const fetchFootballMarkets = async () => {
       try {
@@ -408,11 +426,6 @@ const price = selectedFootballMarket
         };
         const withClosed: FootballMarket[] = data
           .filter((m) => matches(m.market_type))
-          // Multi-outcome markets (m.outcomes populated) aren't rendered by
-          // this card yet -- it only knows how to show binary YES/NO.
-          // Excluding them here (rather than crashing on a null
-          // price_yes/price_no) until the dedicated N-outcome card is built.
-          .filter((m) => !m.outcomes)
           .map((m) => ({
             ...m,
             closed: m.status !== "OPEN" || (!!m.close_at && new Date(m.close_at).getTime() <= now),
@@ -523,6 +536,52 @@ const price = selectedFootballMarket
       setTimeout(() => setFootballTradeStatus({ loading: false, error: null, success: null }), 4000);
     } catch {
       setFootballTradeStatus({ loading: false, error: "Network error — try again", success: null });
+    }
+  };
+
+  const handleMultiOutcomeBuy = async () => {
+    if (!selectedMultiMarket || !selectedMultiOutcome || !selectedMultiMarket.outcomes) return;
+    if (!isLoggedIn) {
+      setShowAuthModal(true);
+      return;
+    }
+    const market = selectedMultiMarket;
+    const outcome = selectedMultiOutcome;
+    const price = market.outcomes![outcome] ?? 100 / Object.keys(market.outcomes!).length;
+    const priceFraction = price / 100;
+    const estContracts = Math.max(1, Math.round(multiAmount / priceFraction));
+
+    setMultiTradeStatus({ loading: true, error: null, success: null });
+    try {
+      const token = await getValidToken();
+      if (!token) {
+        setShowAuthModal(true);
+        setMultiTradeStatus({ loading: false, error: null, success: null });
+        return;
+      }
+      const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ market_id: market.id, outcome, contracts: estContracts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMultiTradeStatus({ loading: false, error: data.detail || "Trade failed", success: null });
+        return;
+      }
+      setMultiTradeStatus({
+        loading: false, error: null,
+        success: `Bought ${estContracts} ${outcome} for ₦${data.paid_naira.toFixed(2)}`,
+      });
+      await refreshPortfolio();
+      // data.prices is the full {outcome_name: price} map, freshly returned
+      setSelectedMultiMarket((prev) => prev && ({ ...prev, outcomes: data.prices }));
+      setFootballMarkets((prev) =>
+        prev.map((m) => (m.id === market.id ? { ...m, outcomes: data.prices } : m))
+      );
+      setTimeout(() => setMultiTradeStatus({ loading: false, error: null, success: null }), 4000);
+    } catch {
+      setMultiTradeStatus({ loading: false, error: "Network error — try again", success: null });
     }
   };
 
@@ -786,6 +845,43 @@ const price = selectedFootballMarket
               <p className={`text-sm ${t.textMuted}`}>No markets open right now. Check back soon.</p>
             )}
             {footballMarkets.filter((m) => !m.closed).map((m) => {
+                if (m.outcomes) {
+                  const selectOutcome = (outcomeName: string) => {
+                    setSelectedMultiMarket(m);
+                    setSelectedMultiOutcome(outcomeName);
+                    setMultiAmount(0);
+                    setMultiTradeStatus({ loading: false, error: null, success: null });
+                    setMultiSheetOpen(true);
+                  };
+                  return (
+                    <div
+                      key={m.id}
+                      onClick={() => router.push(`/market/${m.id}`)}
+                      className={`${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${t.inputBg} ${t.textMuted}`}>
+                          {m.market_type}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1.5 mb-2">
+                        {Object.entries(m.outcomes).map(([name, price]) => (
+                          <button
+                            key={name}
+                            onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium border ${t.border} ${t.textPrimary} bg-transparent cursor-pointer hover:border-blue-400 transition-colors`}
+                          >
+                            <span>{name}</span>
+                            <RollingNumber text={`${price.toFixed(0)}e`} color="#3B82F6" className="font-semibold" />
+                          </button>
+                        ))}
+                      </div>
+                      <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
+                    </div>
+                  );
+                }
+
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
                   // On the All page specifically, desktop uses the
@@ -1351,6 +1447,98 @@ const price = selectedFootballMarket
           </div>
         );
       })()}
+
+    {/* MULTI-OUTCOME TRADE SHEET -- same visual pattern as the binary
+        sheet above, but instead of a Yes/No toggle, shows every outcome
+        as a switchable pill row (since there's no single "other side" to
+        flip to the way there is with Yes/No). Calls the same auto-
+        detecting /trade/buy endpoint the binary sheet uses. */}
+      {multiSheetOpen && selectedMultiMarket && selectedMultiOutcome && selectedMultiMarket.outcomes && (() => {
+        const outcomes = selectedMultiMarket.outcomes!;
+        const price = outcomes[selectedMultiOutcome] ?? 100 / Object.keys(outcomes).length;
+        const priceFraction = price / 100;
+        const estContracts = priceFraction > 0 && multiAmount > 0 ? Math.max(1, Math.round(multiAmount / priceFraction)) : 0;
+        const toWin = estContracts * 100;
+        return (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setMultiSheetOpen(false)} />
+            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-6 md:w-full md:max-w-sm ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-6 px-4 pt-3 shadow-2xl`}>
+              <div className={`w-10 h-1 rounded-full mx-auto mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
+
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${t.inputBg} ${t.textPrimary}`}>Buy</span>
+                <button onClick={() => setMultiSheetOpen(false)} className={`w-7 h-7 rounded-full flex items-center justify-center ${t.inputBg} ${t.textMuted} cursor-pointer border-none`}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <p className={`text-xs ${t.textMuted} mb-3 line-clamp-1`}>{selectedMultiMarket.question}</p>
+
+              {/* outcome switcher -- change which one you're buying before confirming */}
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {Object.entries(outcomes).map(([name, p]) => (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedMultiOutcome(name)}
+                    className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                      name === selectedMultiOutcome
+                        ? "bg-blue-500 border-blue-500 text-white font-medium"
+                        : `${t.inputBg} ${t.border} ${t.textMuted}`
+                    }`}
+                  >
+                    {name} · {p.toFixed(0)}e
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center mb-4">
+                <span className={`text-4xl font-bold ${t.textMuted}`}>₦</span>
+                <input
+                  type="number"
+                  value={multiAmount || ""}
+                  onChange={(e) => setMultiAmount(Number(e.target.value))}
+                  placeholder="0"
+                  className={`text-4xl font-bold bg-transparent outline-none text-center w-40 ${t.textPrimary}`}
+                  autoFocus
+                />
+              </div>
+
+              {multiAmount > 0 && (
+                <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
+                  <span className={t.textMuted}>To win</span>
+                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color="#22C55E" className="font-bold text-sm" />
+                </p>
+              )}
+
+              <div className="flex gap-2 mb-4">
+                {[100, 500, 1000, 5000].map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setMultiAmount((prev) => prev + a)}
+                    className={`flex-1 text-xs py-2 rounded-lg border ${t.border} ${t.textPrimary} cursor-pointer bg-transparent`}
+                  >
+                    +₦{a}
+                  </button>
+                ))}
+              </div>
+
+              {multiTradeStatus.error && <p className="text-xs text-red-500 mb-2 text-center">{multiTradeStatus.error}</p>}
+              {multiTradeStatus.success && <p className="text-xs text-green-500 mb-2 text-center">{multiTradeStatus.success}</p>}
+
+              <button
+                onClick={handleMultiOutcomeBuy}
+                disabled={multiTradeStatus.loading || multiAmount <= 0}
+                className="w-full py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+              >
+                {!isLoggedIn ? "Sign in to trade" : multiTradeStatus.loading ? "…" : `Trade ${selectedMultiOutcome}`}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
     {/* DEPOSIT MODAL */}
       {showDepositModal && (
         <div

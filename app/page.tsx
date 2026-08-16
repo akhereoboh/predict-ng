@@ -159,15 +159,7 @@ export default function Home() {
   const subcategoriesForActive = categories.filter((c) => c.parent?.toUpperCase() === activeFilter.toUpperCase()).map((c) => c.name);
 
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
-  const [selectedFootballMarket, setSelectedFootballMarket] = useState<{
-    id: string;
-    question: string;
-    price_yes: number;
-    price_no: number;
-    close_at: string | null;
-    volume_naira: number;
-    trader_count: number;
-  } | null>(null);
+  const [selectedFootballMarket, setSelectedFootballMarket] = useState<FootballMarket | null>(null);
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [amount, setAmount] = useState(10);
   const [bookmarks, setBookmarks] = useState<string[]>(["1", "3"]);
@@ -259,7 +251,7 @@ export default function Home() {
 
   const activeSide = hoverSide ?? side;
 const price = selectedFootballMarket
-    ? (side === "YES" ? selectedFootballMarket.price_yes : selectedFootballMarket.price_no) / 100
+    ? (side === "YES" ? (selectedFootballMarket.price_yes ?? 50) : (selectedFootballMarket.price_no ?? 50)) / 100
     : side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
   const contracts = (amount / price).toFixed(1);
   const fee = (amount * 0.02).toFixed(2);
@@ -370,8 +362,9 @@ const price = selectedFootballMarket
     question: string;
     status: string;
     winner: string | null;
-    price_yes: number;
-    price_no: number;
+    price_yes: number | null;
+    price_no: number | null;
+    outcomes: Record<string, number> | null;
     market_type: string;
     close_at: string | null;
     volume_naira: number;
@@ -415,6 +408,11 @@ const price = selectedFootballMarket
         };
         const withClosed: FootballMarket[] = data
           .filter((m) => matches(m.market_type))
+          // Multi-outcome markets (m.outcomes populated) aren't rendered by
+          // this card yet -- it only knows how to show binary YES/NO.
+          // Excluding them here (rather than crashing on a null
+          // price_yes/price_no) until the dedicated N-outcome card is built.
+          .filter((m) => !m.outcomes)
           .map((m) => ({
             ...m,
             closed: m.status !== "OPEN" || (!!m.close_at && new Date(m.close_at).getTime() <= now),
@@ -492,7 +490,7 @@ const price = selectedFootballMarket
       return;
     }
     const market = selectedFootballMarket;
-    const priceFraction = (side === "YES" ? market.price_yes : market.price_no) / 100;
+    const priceFraction = (side === "YES" ? (market.price_yes ?? 50) : (market.price_no ?? 50)) / 100;
     const estContracts = Math.max(1, Math.round(amount / priceFraction));
 
     setFootballTradeStatus({ loading: true, error: null, success: null });
@@ -830,11 +828,11 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${m.price_yes.toFixed(0)}e`} color="#22C55E" className="text-base font-bold" />
+                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color="#22C55E" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${m.price_no.toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
+                          <RollingNumber text={`${(m.price_no ?? 0).toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
@@ -854,7 +852,7 @@ const price = selectedFootballMarket
                             : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                         }`}
                       >
-                        Buy YES · {m.price_yes.toFixed(0)}e
+                        Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
@@ -866,7 +864,7 @@ const price = selectedFootballMarket
                             : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
                         }`}
                       >
-                        Buy NO · {m.price_no.toFixed(0)}e
+                        Buy NO · {(m.price_no ?? 0).toFixed(0)}e
                       </button>
                     </div>
                   </div>

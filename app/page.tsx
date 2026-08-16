@@ -650,12 +650,14 @@ const price = selectedFootballMarket
           onClick={() => router.push(`/market/${m.id}`)}
           className={`${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
         >
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${t.inputBg} ${t.textMuted}`}>
-              {m.market_type}
-            </span>
-          </div>
+          {activeFilter !== "SPORTS" && (
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${t.inputBg} ${t.textMuted}`}>
+                {m.market_type}
+              </span>
+            </div>
+          )}
 
           {activeFilter === "SPORTS" ? (
             /* Matching the reference exactly: outcome names stacked on the

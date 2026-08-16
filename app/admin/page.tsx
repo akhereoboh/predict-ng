@@ -111,7 +111,7 @@ export default function AdminPage() {
   // --- team logos ---
   const [teamLogos, setTeamLogos] = useState<Record<string, string>>({});
   const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamLogoUrl, setNewTeamLogoUrl] = useState("");
+  const [newTeamLogoFile, setNewTeamLogoFile] = useState<File | null>(null);
   const [teamLogoError, setTeamLogoError] = useState<string | null>(null);
   const [savingTeamLogo, setSavingTeamLogo] = useState(false);
 
@@ -126,8 +126,8 @@ export default function AdminPage() {
   }, []);
 
   const handleSaveTeamLogo = async () => {
-    if (!newTeamName.trim() || !newTeamLogoUrl.trim()) {
-      setTeamLogoError("Enter both a team name and a logo URL.");
+    if (!newTeamName.trim() || !newTeamLogoFile) {
+      setTeamLogoError("Enter a team name and choose an image file.");
       return;
     }
     setSavingTeamLogo(true);
@@ -135,15 +135,20 @@ export default function AdminPage() {
     try {
       const token = await getValidToken();
       if (!token) { setTeamLogoError("Not signed in."); setSavingTeamLogo(false); return; }
-      const res = await fetch(`${API_BASE}/admin/team-logos`, {
+      const formData = new FormData();
+      formData.append("name", newTeamName.trim());
+      formData.append("file", newTeamLogoFile);
+      // no Content-Type header here on purpose -- the browser sets the
+      // correct multipart boundary itself when given a FormData body
+      const res = await fetch(`${API_BASE}/admin/team-logos/upload`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newTeamName.trim(), logo_url: newTeamLogoUrl.trim() }),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
       const data = await res.json();
-      if (!res.ok) { setTeamLogoError(data.detail || "Couldn't save."); setSavingTeamLogo(false); return; }
+      if (!res.ok) { setTeamLogoError(data.detail || "Couldn't upload."); setSavingTeamLogo(false); return; }
       setNewTeamName("");
-      setNewTeamLogoUrl("");
+      setNewTeamLogoFile(null);
       await fetchTeamLogos();
     } catch {
       setTeamLogoError("Network error — try again.");
@@ -849,7 +854,7 @@ export default function AdminPage() {
         <div className={`${t.cardBg} border ${t.border} rounded-xl p-5 mb-6 shadow-sm`}>
           <h2 className={`text-base font-bold ${t.textPrimary} mb-1`}>Team logos</h2>
           <p className={`text-xs ${t.textMuted} mb-4`}>
-            Save a logo once per team name (e.g. exactly &quot;Barcelona&quot;) — any market whose outcome matches that name shows this logo automatically, no need to re-link it per market.
+            Upload a logo once per team name (e.g. exactly &quot;Barcelona&quot;) — any market whose outcome matches that name shows this logo automatically, no need to re-upload it per market. Files are hosted on your own project, so they won&apos;t break if some external page changes.
           </p>
 
           <div className="flex gap-2 mb-2">
@@ -863,22 +868,21 @@ export default function AdminPage() {
               spellCheck={false}
               className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
             />
-            <input
-              type="text"
-              placeholder="Logo URL"
-              value={newTeamLogoUrl}
-              onChange={(e) => setNewTeamLogoUrl(e.target.value)}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
-            />
+            <label className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${newTeamLogoFile ? t.textPrimary : t.textMuted} cursor-pointer truncate`}>
+              {newTeamLogoFile ? newTeamLogoFile.name : "Choose image file…"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setNewTeamLogoFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+            </label>
             <button
               onClick={handleSaveTeamLogo}
               disabled={savingTeamLogo}
               className={`shrink-0 px-4 rounded-lg text-sm font-medium border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
             >
-              {savingTeamLogo ? "…" : "Save"}
+              {savingTeamLogo ? "…" : "Upload"}
             </button>
           </div>
           {teamLogoError && <p className="text-xs text-red-500 mb-2">{teamLogoError}</p>}

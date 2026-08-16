@@ -689,7 +689,7 @@ const price = selectedFootballMarket
                need to fit the same row. We don't have team logos or W-D-L
                records to show on the left the way Polymarket does, so
                it's just the names. */
-            <div className="flex items-center justify-between gap-3 py-2 mb-2">
+            <div className="flex items-center justify-between gap-3 pt-8 pb-2 mb-2">
               <div className="flex flex-col gap-3 shrink-0">
                 {outcomeEntries.map(([name]) => (
                   <div key={name} className="flex items-center gap-2">
@@ -707,7 +707,7 @@ const price = selectedFootballMarket
                     key={name}
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
                     className={`rounded-lg font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
-                      outcomeEntries.length <= 2 ? "px-3 py-2.5 text-sm" : "px-2 py-2 text-xs"
+                      outcomeEntries.length <= 2 ? "px-7 py-2.5 text-sm" : "px-5 py-2 text-xs"
                     } ${sportsPillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {Math.floor(price)}e
@@ -992,7 +992,7 @@ const price = selectedFootballMarket
       {/* BODY */}
       <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 pb-20">
         {/* LEFT */}
-        <div className={`grid grid-cols-1 ${activeFilter === "SPORTS" ? "max-w-xl mx-auto" : "md:grid-cols-2"} gap-3 w-full items-start`}>
+        <div className={`grid grid-cols-1 ${activeFilter === "SPORTS" ? "max-w-3xl mx-auto" : "md:grid-cols-2"} gap-3 w-full items-start`}>
           {(activeFilter === "All" || activeFilter === "CRYPTO") && (() => {
             const yes = btcLive?.price_yes ?? 50;
             const no = btcLive?.price_no ?? 50;

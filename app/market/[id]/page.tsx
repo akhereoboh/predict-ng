@@ -237,7 +237,7 @@ export default function MarketPage() {
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [customAmounts, setCustomAmounts] = useState([1, 5, 7]);
+  const [customAmounts, setCustomAmounts] = useState([1000, 5000, 7000]);
   const [activeTab, setActiveTab] = useState("Comments");
   const [comment, setComment] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -314,12 +314,19 @@ export default function MarketPage() {
         horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
         vertLines: { visible: false },
       },
-      rightPriceScale: { borderVisible: false },
+      rightPriceScale: { borderVisible: false, autoScale: false },
       timeScale: { borderVisible: false, timeVisible: true },
       crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
       handleScroll: false,
       handleScale: false,
     });
+    // Prices here are always 0-100% probabilities -- fixing the visible
+    // range to exactly that (instead of auto-scaling to whatever tiny
+    // range the actual data happens to occupy) means a brand-new market
+    // sitting at 50/50 genuinely renders in the vertical middle of the
+    // chart, with real headroom to show movement as it happens, instead
+    // of a razor-thin auto-zoomed sliver around 50.
+    chart.priceScale("right").setVisibleRange({ from: 0, to: 100 });
     const series = chart.addSeries(LineSeries, {
       color: "#CCFF00",
       lineWidth: 2,
@@ -630,19 +637,39 @@ export default function MarketPage() {
             )}
           </div>
 
-          {/* YES/NO PILL */}
-          <div className="flex gap-2 mb-4">
-            {["Yes", "No"].map((s) => (
-              <button key={s} onClick={() => setSide(s.toUpperCase() as "YES" | "NO")}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
-                  side === s.toUpperCase()
-                    ? s === "Yes"
-                      ? theme === "dark" ? "bg-green-500 border-transparent text-black" : `${t.accent} border-transparent text-white`
-                      : theme === "dark" ? "bg-red-500 border-transparent text-white" : "bg-[#6B0D0D] border-transparent text-white"
-                    : `${t.navBg} ${t.border} ${t.textMuted}`
-                }`}
-              >{s}</button>
-            ))}
+          {/* YES/NO PILL (binary) or OUTCOME PILL (multi-outcome) */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {realMarket?.prices ? (
+              Object.keys(realMarket.prices).map((name, i) => {
+                const outcomeNames = Object.keys(realMarket.prices!);
+                const color = colorForOutcome(name, i, outcomeNames[0]);
+                const isSelected = selectedRealOutcome === name;
+                return (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedRealOutcome(name)}
+                    style={isSelected ? { backgroundColor: color } : undefined}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
+                      isSelected ? "border-transparent text-white" : `${t.navBg} ${t.border} ${t.textMuted}`
+                    }`}
+                  >
+                    {name}
+                  </button>
+                );
+              })
+            ) : (
+              ["Yes", "No"].map((s) => (
+                <button key={s} onClick={() => setSide(s.toUpperCase() as "YES" | "NO")}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
+                    side === s.toUpperCase()
+                      ? s === "Yes"
+                        ? theme === "dark" ? "bg-green-500 border-transparent text-black" : `${t.accent} border-transparent text-white`
+                        : theme === "dark" ? "bg-red-500 border-transparent text-white" : "bg-[#6B0D0D] border-transparent text-white"
+                      : `${t.navBg} ${t.border} ${t.textMuted}`
+                  }`}
+                >{s}</button>
+              ))
+            )}
           </div>
 
           {/* CHART */}

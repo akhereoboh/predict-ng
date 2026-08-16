@@ -323,7 +323,7 @@ export default function MarketPage() {
         horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
         vertLines: { visible: false },
       },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.3, bottom: 0.3 } },
+      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: { borderVisible: false, timeVisible: true },
       crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
       handleScroll: false,

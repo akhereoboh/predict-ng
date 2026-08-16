@@ -792,7 +792,7 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#4ADE80" : "#2563EB"} className="text-base font-bold" />
+                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#CCFF00" : "#2563EB"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
@@ -801,9 +801,9 @@ const price = selectedFootballMarket
                     </div>
                   </div>
                   <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
-                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#CCFF00]" : t.accent}`} style={{ width: `${yes}%` }} />
                     <div
-                      className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)] transition-all duration-500 animate-pulse"
+                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#CCFF00] shadow-[0_0_8px_2px_rgba(204,255,0,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
                       style={{ left: `${yes}%`, transform: "translate(-50%, -50%)" }}
                     />
                   </div>
@@ -812,7 +812,7 @@ const price = selectedFootballMarket
                 <div className="flex gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-green-500 hover:bg-green-400 text-black"
+                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#CCFF00] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
                   >
                     Buy Up · {Math.round(yes)}e
                   </button>
@@ -872,26 +872,31 @@ const price = selectedFootballMarket
                         </span>
                       </div>
 
-                      <div className="flex flex-col gap-1 mb-2">
-                        {outcomeEntries.map(([name, price]) => (
-                          <div key={name} className="flex items-center justify-between text-sm">
-                            <span className={`font-medium ${t.textPrimary}`}>{name}</span>
-                            <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* multi-segment probability bar -- same colors as
-                          the buttons below, each segment's width is that
-                          outcome's real, live price */}
-                      <div className={`flex h-0.5 rounded-full overflow-hidden mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-                        {outcomeEntries.map(([name, price], i) => (
-                          <div
-                            key={name}
-                            className={`h-full transition-all duration-500 ${BAR_COLORS[i % BAR_COLORS.length]}`}
-                            style={{ width: `${price}%` }}
-                          />
-                        ))}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex gap-3">
+                          {outcomeEntries.map(([name, price], i) => (
+                            <div key={name} className="flex flex-col items-center">
+                              <RollingNumber
+                                text={`${price.toFixed(0)}e`}
+                                color={i === 0 ? "#EF4444" : i === 1 ? (theme === "dark" ? "#CCFF00" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
+                                className="text-base font-bold"
+                              />
+                              <span className={`text-xs ${t.textMuted}`}>{name}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {/* multi-segment probability bar -- same colors as
+                            the buttons below, each segment's width is that
+                            outcome's real, live price */}
+                        <div className={`flex-1 flex h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                          {outcomeEntries.map(([name, price], i) => (
+                            <div
+                              key={name}
+                              className={`h-full transition-all duration-500 ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                              style={{ width: `${price}%` }}
+                            />
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex gap-2 mb-2">
@@ -936,7 +941,7 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color="#22C55E" className="text-base font-bold" />
+                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#CCFF00" : "#2563EB"} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
@@ -945,10 +950,10 @@ const price = selectedFootballMarket
                         </div>
                       </div>
                       <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${m.price_yes ?? 50}%` }} />
+                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#CCFF00]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
                         {/* floating glow marker at the boundary between YES and NO */}
                         <div
-                          className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)] transition-all duration-500 animate-pulse"
+                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#CCFF00] shadow-[0_0_8px_2px_rgba(204,255,0,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
                           style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
                         />
                       </div>
@@ -959,7 +964,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                         onMouseEnter={() => setHoverSide("YES")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-green-500 hover:bg-green-400 text-black"
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#CCFF00] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
                       >
                         Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
                       </button>
@@ -1198,7 +1203,7 @@ const price = selectedFootballMarket
                   text={`${payout.toFixed(2)}e`}
                   color={
                     theme === "dark"
-                      ? activeSide === "YES" ? "#4ADE80" : activeSide === "NO" ? "#F87171" : "#CCFF00"
+                      ? activeSide === "YES" ? "#CCFF00" : activeSide === "NO" ? "#F87171" : "#CCFF00"
                       : "#2563EB"
                   }
                 />
@@ -1221,10 +1226,10 @@ const price = selectedFootballMarket
               className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors disabled:opacity-50 ${
                 theme === "dark"
                   ? activeSide === "YES"
-                    ? "bg-green-500 hover:bg-green-400 text-black"
+                    ? "bg-[#CCFF00] hover:opacity-90 text-black"
                     : activeSide === "NO"
                     ? "bg-red-500 hover:bg-red-400 text-white"
-                    : side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                    : side === "YES" ? "bg-[#CCFF00] text-black" : "bg-red-500 text-white"
                   : side === "YES" ? `${t.accent} ${t.accentHover} text-white` : "bg-[#6B0D0D] text-white"
               }`}>
               {!isLoggedIn
@@ -1390,7 +1395,7 @@ const price = selectedFootballMarket
               </div>
 
               <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{questionText}</p>
-              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? "text-green-500" : "text-red-500"}`}>{side}</p>
+              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? (theme === "dark" ? "text-[#CCFF00]" : "text-blue-600") : "text-red-500"}`}>{side}</p>
 
               <div className="flex items-center justify-center mb-4">
                 <span className={`text-5xl font-bold ${t.textMuted}`}>₦</span>
@@ -1408,7 +1413,7 @@ const price = selectedFootballMarket
                 <button
                   onClick={() => setSide("YES")}
                   className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                    side === "YES" ? "bg-green-500 text-black" : `${t.inputBg} ${t.textMuted}`
+                    side === "YES" ? (theme === "dark" ? "bg-[#CCFF00] text-black" : "bg-blue-600 text-white") : `${t.inputBg} ${t.textMuted}`
                   }`}
                 >
                   Yes
@@ -1426,7 +1431,7 @@ const price = selectedFootballMarket
               {amount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${payout.toFixed(2)}`} color="#22C55E" className="font-bold text-sm" />
+                  <RollingNumber text={`₦${payout.toFixed(2)}`} color={theme === "dark" ? "#CCFF00" : "#2563EB"} className="font-bold text-sm" />
                 </p>
               )}
 
@@ -1522,7 +1527,7 @@ const price = selectedFootballMarket
               {multiAmount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color="#22C55E" className="font-bold text-sm" />
+                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color={theme === "dark" ? "#CCFF00" : "#2563EB"} className="font-bold text-sm" />
                 </p>
               )}
 

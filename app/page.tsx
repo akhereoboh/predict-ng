@@ -800,7 +800,7 @@ const price = selectedFootballMarket
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
-                  <div className={`relative flex-1 h-1 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
+                  <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
                     <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
                     <div
                       className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)] transition-all duration-500 animate-pulse"
@@ -842,16 +842,22 @@ const price = selectedFootballMarket
                     setMultiSheetOpen(true);
                   };
                   const outcomeEntries = Object.entries(m.outcomes);
-                  // Position-based color palette (no real team-brand colors to
-                  // draw on) -- the leading two outcomes get strong, distinct
-                  // fills; a third ("Draw", typically) gets a neutral one;
-                  // anything beyond that cycles through the rest.
+                  // Uses the app's OWN established colors, not arbitrary
+                  // ones: red for the first outcome (matches the "NO" red
+                  // used everywhere else), then our real accent color for
+                  // the second (neon green #CCFF00 in dark mode, blue in
+                  // light mode -- same accent that highlights the active
+                  // nav pill), then a neutral gray for a third ("Draw",
+                  // typically) and beyond.
                   const PILL_COLORS = [
                     "bg-red-500 hover:bg-red-400 text-white",
-                    "bg-teal-600 hover:bg-teal-500 text-white",
+                    `${t.accent} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
                     `${t.inputBg} ${t.textMuted} hover:opacity-80`,
-                    "bg-amber-600 hover:bg-amber-500 text-white",
-                    "bg-purple-600 hover:bg-purple-500 text-white",
+                  ];
+                  const BAR_COLORS = [
+                    "bg-red-500",
+                    theme === "dark" ? "bg-[#CCFF00]" : "bg-blue-600",
+                    theme === "dark" ? "bg-zinc-600" : "bg-slate-300",
                   ];
                   return (
                     <div
@@ -866,12 +872,25 @@ const price = selectedFootballMarket
                         </span>
                       </div>
 
-                      <div className="flex flex-col gap-1 mb-3">
+                      <div className="flex flex-col gap-1 mb-2">
                         {outcomeEntries.map(([name, price]) => (
                           <div key={name} className="flex items-center justify-between text-sm">
                             <span className={`font-medium ${t.textPrimary}`}>{name}</span>
                             <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
                           </div>
+                        ))}
+                      </div>
+
+                      {/* multi-segment probability bar -- same colors as
+                          the buttons below, each segment's width is that
+                          outcome's real, live price */}
+                      <div className={`flex h-0.5 rounded-full overflow-hidden mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                        {outcomeEntries.map(([name, price], i) => (
+                          <div
+                            key={name}
+                            className={`h-full transition-all duration-500 ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                            style={{ width: `${price}%` }}
+                          />
                         ))}
                       </div>
 
@@ -925,7 +944,7 @@ const price = selectedFootballMarket
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
-                      <div className={`relative flex-1 h-1 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
+                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
                         <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${m.price_yes ?? 50}%` }} />
                         {/* floating glow marker at the boundary between YES and NO */}
                         <div

@@ -689,7 +689,7 @@ const price = selectedFootballMarket
                need to fit the same row. We don't have team logos or W-D-L
                records to show on the left the way Polymarket does, so
                it's just the names. */
-            <div className="flex items-center justify-between gap-3 pt-6 pb-2 mb-2">
+            <div className="flex items-center justify-between gap-3 pt-10 pb-2 mb-2">
               <div className="flex flex-col gap-4 shrink-0">
                 {outcomeEntries.map(([name]) => (
                   <div key={name} className="flex items-center gap-2">
@@ -707,7 +707,7 @@ const price = selectedFootballMarket
                     key={name}
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
                     className={`rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
-                      outcomeEntries.length <= 2 ? "px-4 py-3 text-sm" : "px-2.5 py-2.5 text-xs"
+                      outcomeEntries.length <= 2 ? "px-4 py-4 text-sm" : "px-2.5 py-3.5 text-xs"
                     } ${sportsPillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e

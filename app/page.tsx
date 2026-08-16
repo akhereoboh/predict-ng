@@ -623,6 +623,33 @@ const price = selectedFootballMarket
       // gray regardless of position, since that's the one
       // outcome that should never look like a "pick."
       const isBinary = outcomeEntries.length === 2;
+      // Sports-specific palette: muted, varied tones (burnt orange, maroon,
+      // navy, forest green) matching Polymarket's own look, instead of a
+      // fixed bright red/green pair repeated on every single match. Colors
+      // are picked deterministically from each match's own outcome names
+      // (not randomly re-rolled on every render), so the same match always
+      // looks the same, but different matches naturally get different
+      // color combinations since their team names differ. "Draw" always
+      // stays neutral gray regardless of position.
+      const MUTED_SPORTS_COLORS = [
+        "bg-orange-700 hover:bg-orange-600 text-white",
+        "bg-red-800 hover:bg-red-700 text-white",
+        "bg-blue-800 hover:bg-blue-700 text-white",
+        "bg-emerald-700 hover:bg-emerald-600 text-white",
+        "bg-purple-800 hover:bg-purple-700 text-white",
+        "bg-rose-800 hover:bg-rose-700 text-white",
+      ];
+      const hashIndex = (str: string, mod: number) => {
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+        return h % mod;
+      };
+      const sportsStartIdx = hashIndex(outcomeEntries[0][0], MUTED_SPORTS_COLORS.length);
+      let sportsColorSlot = 0;
+      const sportsPillColorFor = (name: string) => {
+        if (name.toLowerCase() === "draw") return `${t.inputBg} ${t.textMuted} hover:opacity-80`;
+        return MUTED_SPORTS_COLORS[(sportsStartIdx + sportsColorSlot++) % MUTED_SPORTS_COLORS.length];
+      };
       const RICH_PILL_COLORS = [
         "bg-red-600 hover:bg-red-500 text-white",
         "bg-amber-500 hover:bg-amber-400 text-black",
@@ -704,7 +731,7 @@ const price = selectedFootballMarket
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
                     className={`rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
                       outcomeEntries.length <= 2 ? "px-5 py-5 text-base" : "px-3 py-4 text-sm"
-                    } ${pillColorFor(name)}`}
+                    } ${sportsPillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
                   </button>

@@ -710,7 +710,7 @@ const price = selectedFootballMarket
                       outcomeEntries.length <= 2 ? "px-4 py-4 text-sm" : "px-2.5 py-3.5 text-xs"
                     } ${sportsPillColorFor(name)}`}
                   >
-                    {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
+                    {name.slice(0, 3).toUpperCase()} {Math.floor(price)}e
                   </button>
                 ))}
               </div>
@@ -724,7 +724,7 @@ const price = selectedFootballMarket
                 {outcomeEntries.map(([name, price]) => (
                   <div key={name} className="flex items-center justify-between text-sm">
                     <span className={`font-medium ${t.textPrimary}`}>{name}</span>
-                    <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+                    <RollingNumber text={`${Math.floor(price)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
                   </div>
                 ))}
               </div>
@@ -734,7 +734,7 @@ const price = selectedFootballMarket
                   {outcomeEntries.map(([name, price], i) => (
                     <div key={name} className="flex flex-col items-center">
                       <RollingNumber
-                        text={`${price.toFixed(0)}e`}
+                        text={`${Math.floor(price)}e`}
                         color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
                         className="text-base font-bold"
                       />
@@ -804,11 +804,11 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
+                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_no ?? 0).toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
+                          <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color="#EF4444" className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
@@ -829,7 +829,7 @@ const price = selectedFootballMarket
                         onMouseLeave={() => setHoverSide(null)}
                         className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
                       >
-                        Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
+                        Buy YES · {Math.floor(m.price_yes ?? 0)}e
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
@@ -837,7 +837,7 @@ const price = selectedFootballMarket
                         onMouseLeave={() => setHoverSide(null)}
                         className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                       >
-                        Buy NO · {(m.price_no ?? 0).toFixed(0)}e
+                        Buy NO · {Math.floor(m.price_no ?? 0)}e
                       </button>
                     </div>
                   </div>

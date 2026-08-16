@@ -531,8 +531,8 @@ export default function MarketPage() {
     }
   };
 
-  const price = realMarket?.prices && selectedRealOutcome
-    ? (realMarket.prices[selectedRealOutcome] ?? 100 / Object.keys(realMarket.prices).length) / 100
+  const price = realMarket?.prices
+    ? (realMarket.prices[selectedRealOutcome ?? Object.keys(realMarket.prices)[0]] ?? 100 / Object.keys(realMarket.prices).length) / 100
     : isRealMarket && realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : (side === "YES" ? market.yesPrice : market.noPrice);
   const payout = (amount / price).toFixed(2);
   const fee = (amount * 0.02).toFixed(2);
@@ -551,7 +551,9 @@ export default function MarketPage() {
   };
 
   if (isRealMarket) {
-    const price = realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : 0.5;
+    const price = realMarket?.prices
+      ? (realMarket.prices[selectedRealOutcome ?? Object.keys(realMarket.prices)[0]] ?? 100 / Object.keys(realMarket.prices).length) / 100
+      : realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : 0.5;
     const payout = price > 0 ? (amount / price).toFixed(2) : "0.00";
     const fee = (amount * 0.02).toFixed(2);
     const kickoffEstimate = realMarket?.close_at ? new Date(new Date(realMarket.close_at).getTime() - 10 * 60 * 1000) : null;
@@ -605,7 +607,16 @@ export default function MarketPage() {
           {/* CHANCE */}
           <div className="flex items-center gap-3 mb-4">
             <div>
-              {realMarket ? (
+              {realMarket?.prices ? (() => {
+                const entries = Object.entries(realMarket.prices!);
+                const leading = entries.reduce((a, b) => (b[1] > a[1] ? b : a), entries[0]);
+                return (
+                  <div className="flex items-baseline gap-2">
+                    <RollingNumber text={`${leading[1].toFixed(0)}%`} color={theme === "dark" ? "#FFFFFF" : "#000000"} className="text-3xl font-bold" />
+                    <span className={`text-sm ${t.textMuted}`}>{leading[0]}</span>
+                  </div>
+                );
+              })() : realMarket ? (
                 <RollingNumber text={`${realMarket.price_yes.toFixed(0)}%`} color={theme === "dark" ? "#FFFFFF" : "#000000"} className="text-3xl font-bold" />
               ) : (
                 <div className={`text-3xl font-bold ${t.textPrimary}`}>—</div>

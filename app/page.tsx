@@ -178,6 +178,7 @@ export default function Home() {
   const [selectedMultiOutcome, setSelectedMultiOutcome] = useState<string | null>(null);
   const [multiAmount, setMultiAmount] = useState(0);
   const [multiTradeStatus, setMultiTradeStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
+  const [expandedLeagues, setExpandedLeagues] = useState<Set<string>>(new Set());
   const [hoverSide, setHoverSide] = useState<"YES" | "NO" | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -370,6 +371,7 @@ const price = selectedFootballMarket
     price_no: number | null;
     outcomes: Record<string, number> | null;
     market_type: string;
+    league: string | null;
     close_at: string | null;
     volume_naira: number;
     trader_count: number;
@@ -575,6 +577,210 @@ const price = selectedFootballMarket
     } catch {
       setMultiTradeStatus({ loading: false, error: "Network error — try again", success: null });
     }
+  };
+
+  const renderMarketCard = (m: FootballMarket) => {
+    if (m.outcomes) {
+      const selectOutcome = (outcomeName: string) => {
+        setSelectedMultiMarket(m);
+        setSelectedMultiOutcome(outcomeName);
+        setMultiAmount(0);
+        setMultiTradeStatus({ loading: false, error: null, success: null });
+        setMultiSheetOpen(true);
+      };
+      const outcomeEntries = Object.entries(m.outcomes);
+      // Uses the app's OWN established colors, not arbitrary
+      // ones: red for the first outcome (matches the "NO" red
+      // used everywhere else), then our real accent color for
+      // the second (true neon green #00E676 in dark mode, blue in
+      // light mode -- same accent that highlights the active
+      // nav pill), then a neutral gray for a third ("Draw",
+      // typically) and beyond.
+      // Exactly-2-outcome markets (like Barca vs Real Madrid)
+      // keep the fixed red/accent-green treatment already
+      // approved -- unchanged. 3+ outcome markets (typically a
+      // team/Draw/team football market) get a richer, more
+      // varied palette instead, since two colors read as flat
+      // once there's a third option -- matching the visual
+      // variety in the Polymarket sports reference. Any
+      // outcome literally named "Draw" always stays neutral
+      // gray regardless of position, since that's the one
+      // outcome that should never look like a "pick."
+      const isBinary = outcomeEntries.length === 2;
+      const RICH_PILL_COLORS = [
+        "bg-red-600 hover:bg-red-500 text-white",
+        "bg-amber-500 hover:bg-amber-400 text-black",
+        `${theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white"} hover:opacity-90`,
+        "bg-purple-600 hover:bg-purple-500 text-white",
+        "bg-pink-600 hover:bg-pink-500 text-white",
+        "bg-cyan-600 hover:bg-cyan-500 text-white",
+      ];
+      const RICH_BAR_COLORS = [
+        "bg-red-600", "bg-amber-500",
+        theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
+        "bg-purple-600", "bg-pink-600", "bg-cyan-600",
+      ];
+      const neutralPill = `${t.inputBg} ${t.textMuted} hover:opacity-80`;
+      const neutralBar = theme === "dark" ? "bg-zinc-600" : "bg-slate-300";
+      let colorSlot = 0; // only advances past non-Draw outcomes, so colors stay distinct
+      const pillColorFor = (name: string) => {
+        if (name.toLowerCase() === "draw") return neutralPill;
+        if (isBinary) return colorSlot++ === 0 ? PILL_COLORS[0] : PILL_COLORS[1];
+        return RICH_PILL_COLORS[colorSlot++ % RICH_PILL_COLORS.length];
+      };
+      let barColorSlot = 0;
+      const barColorFor = (name: string) => {
+        if (name.toLowerCase() === "draw") return neutralBar;
+        if (isBinary) return barColorSlot++ === 0 ? BAR_COLORS[0] : BAR_COLORS[1];
+        return RICH_BAR_COLORS[barColorSlot++ % RICH_BAR_COLORS.length];
+      };
+      const PILL_COLORS = [
+        "bg-red-500 hover:bg-red-400 text-white",
+        `${theme === "dark" ? "bg-[#00E676]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
+        `${t.inputBg} ${t.textMuted} hover:opacity-80`,
+      ];
+      const BAR_COLORS = [
+        "bg-red-500",
+        theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
+        theme === "dark" ? "bg-zinc-600" : "bg-slate-300",
+      ];
+      return (
+        <div
+          key={m.id}
+          onClick={() => router.push(`/market/${m.id}`)}
+          className={`${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
+        >
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${t.inputBg} ${t.textMuted}`}>
+              {m.market_type}
+            </span>
+          </div>
+
+          {/* name + % rows -- the first thing under the title,
+              same info as the price/bar section below, just
+              laid out to read at a glance before you even look
+              at the bar */}
+          <div className="flex flex-col gap-0.5 mb-3">
+            {outcomeEntries.map(([name, price]) => (
+              <div key={name} className="flex items-center justify-between text-sm">
+                <span className={`font-medium ${t.textPrimary}`}>{name}</span>
+                <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex gap-3">
+              {outcomeEntries.map(([name, price], i) => (
+                <div key={name} className="flex flex-col items-center">
+                  <RollingNumber
+                    text={`${price.toFixed(0)}e`}
+                    color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
+                    className="text-base font-bold"
+                  />
+                  <span className={`text-xs ${t.textMuted}`}>{name}</span>
+                </div>
+              ))}
+            </div>
+            {/* multi-segment probability bar -- same colors as
+                the buttons below, each segment's width is that
+                outcome's real, live price */}
+            <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+              {outcomeEntries.map(([name, price]) => (
+                <div
+                  key={name}
+                  className={`h-full transition-all duration-500 ${barColorFor(name)}`}
+                  style={{ width: `${price}%` }}
+                />
+              ))}
+              <div
+                className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 mb-2">
+            {outcomeEntries.map(([name]) => (
+              <button
+                key={name}
+                onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
+        </div>
+      );
+    }
+
+    const isSelected = selectedFootballMarket?.id === m.id;
+    const selectFootball = (pickSide: "YES" | "NO") => {
+      setSelectedFootballMarket(m);
+      setSide(pickSide);
+      setAmount(0);
+      setFootballTradeStatus({ loading: false, error: null, success: null });
+      setMobileSheetOpen(true);
+    };
+    return (
+      <div
+                    key={m.id}
+                    onClick={() => router.push(`/market/${m.id}`)}
+                    className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
+                      isSelected
+                        ? `${theme === "dark" ? "border-[#CCFF00] shadow-[#CCFF00]/20" : "border-blue-500 shadow-blue-100"} shadow-md`
+                        : `${t.border} hover:shadow-md`
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
+                    <p className={`text-xs ${t.textMuted} mb-3`}>
+                      ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+                    </p>
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
+                          <span className={`text-xs ${t.textMuted}`}>YES</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <RollingNumber text={`${(m.price_no ?? 0).toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
+                          <span className={`text-xs ${t.textMuted}`}>NO</span>
+                        </div>
+                      </div>
+                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
+                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
+                        {/* floating glow marker at the boundary between YES and NO */}
+                        <div
+                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
+                        onMouseEnter={() => setHoverSide("YES")}
+                        onMouseLeave={() => setHoverSide(null)}
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+                      >
+                        Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
+                        onMouseEnter={() => setHoverSide("NO")}
+                        onMouseLeave={() => setHoverSide(null)}
+                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
+                      >
+                        Buy NO · {(m.price_no ?? 0).toFixed(0)}e
+                      </button>
+                    </div>
+                  </div>
+                );
   };
 
   return (
@@ -832,210 +1038,50 @@ const price = selectedFootballMarket
             {!footballLoading && footballMarkets.filter((m) => !m.closed).length === 0 && (
               <p className={`text-sm ${t.textMuted}`}>No markets open right now. Check back soon.</p>
             )}
-            {footballMarkets.filter((m) => !m.closed).map((m) => {
-                if (m.outcomes) {
-                  const selectOutcome = (outcomeName: string) => {
-                    setSelectedMultiMarket(m);
-                    setSelectedMultiOutcome(outcomeName);
-                    setMultiAmount(0);
-                    setMultiTradeStatus({ loading: false, error: null, success: null });
-                    setMultiSheetOpen(true);
-                  };
-                  const outcomeEntries = Object.entries(m.outcomes);
-                  // Uses the app's OWN established colors, not arbitrary
-                  // ones: red for the first outcome (matches the "NO" red
-                  // used everywhere else), then our real accent color for
-                  // the second (true neon green #00E676 in dark mode, blue in
-                  // light mode -- same accent that highlights the active
-                  // nav pill), then a neutral gray for a third ("Draw",
-                  // typically) and beyond.
-                  // Exactly-2-outcome markets (like Barca vs Real Madrid)
-                  // keep the fixed red/accent-green treatment already
-                  // approved -- unchanged. 3+ outcome markets (typically a
-                  // team/Draw/team football market) get a richer, more
-                  // varied palette instead, since two colors read as flat
-                  // once there's a third option -- matching the visual
-                  // variety in the Polymarket sports reference. Any
-                  // outcome literally named "Draw" always stays neutral
-                  // gray regardless of position, since that's the one
-                  // outcome that should never look like a "pick."
-                  const isBinary = outcomeEntries.length === 2;
-                  const RICH_PILL_COLORS = [
-                    "bg-red-600 hover:bg-red-500 text-white",
-                    "bg-amber-500 hover:bg-amber-400 text-black",
-                    `${theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white"} hover:opacity-90`,
-                    "bg-purple-600 hover:bg-purple-500 text-white",
-                    "bg-pink-600 hover:bg-pink-500 text-white",
-                    "bg-cyan-600 hover:bg-cyan-500 text-white",
-                  ];
-                  const RICH_BAR_COLORS = [
-                    "bg-red-600", "bg-amber-500",
-                    theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
-                    "bg-purple-600", "bg-pink-600", "bg-cyan-600",
-                  ];
-                  const neutralPill = `${t.inputBg} ${t.textMuted} hover:opacity-80`;
-                  const neutralBar = theme === "dark" ? "bg-zinc-600" : "bg-slate-300";
-                  let colorSlot = 0; // only advances past non-Draw outcomes, so colors stay distinct
-                  const pillColorFor = (name: string) => {
-                    if (name.toLowerCase() === "draw") return neutralPill;
-                    if (isBinary) return colorSlot++ === 0 ? PILL_COLORS[0] : PILL_COLORS[1];
-                    return RICH_PILL_COLORS[colorSlot++ % RICH_PILL_COLORS.length];
-                  };
-                  let barColorSlot = 0;
-                  const barColorFor = (name: string) => {
-                    if (name.toLowerCase() === "draw") return neutralBar;
-                    if (isBinary) return barColorSlot++ === 0 ? BAR_COLORS[0] : BAR_COLORS[1];
-                    return RICH_BAR_COLORS[barColorSlot++ % RICH_BAR_COLORS.length];
-                  };
-                  const PILL_COLORS = [
-                    "bg-red-500 hover:bg-red-400 text-white",
-                    `${theme === "dark" ? "bg-[#00E676]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
-                    `${t.inputBg} ${t.textMuted} hover:opacity-80`,
-                  ];
-                  const BAR_COLORS = [
-                    "bg-red-500",
-                    theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
-                    theme === "dark" ? "bg-zinc-600" : "bg-slate-300",
-                  ];
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={() => router.push(`/market/${m.id}`)}
-                      className={`${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${t.inputBg} ${t.textMuted}`}>
-                          {m.market_type}
-                        </span>
-                      </div>
+            {(() => {
+              const openMarkets = footballMarkets.filter((m) => !m.closed);
+              const ungrouped = openMarkets.filter((m) => !m.league);
+              const leagueNames = Array.from(new Set(openMarkets.filter((m) => m.league).map((m) => m.league as string)));
+              const CARDS_PER_LEAGUE_PREVIEW = 3;
 
-                      {/* name + % rows -- the first thing under the title,
-                          same info as the price/bar section below, just
-                          laid out to read at a glance before you even look
-                          at the bar */}
-                      <div className="flex flex-col gap-0.5 mb-3">
-                        {outcomeEntries.map(([name, price]) => (
-                          <div key={name} className="flex items-center justify-between text-sm">
-                            <span className={`font-medium ${t.textPrimary}`}>{name}</span>
-                            <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
-                          </div>
-                        ))}
-                      </div>
+              const toggleLeague = (name: string) => {
+                setExpandedLeagues((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(name)) next.delete(name);
+                  else next.add(name);
+                  return next;
+                });
+              };
 
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex gap-3">
-                          {outcomeEntries.map(([name, price], i) => (
-                            <div key={name} className="flex flex-col items-center">
-                              <RollingNumber
-                                text={`${price.toFixed(0)}e`}
-                                color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
-                                className="text-base font-bold"
-                              />
-                              <span className={`text-xs ${t.textMuted}`}>{name}</span>
-                            </div>
-                          ))}
+              return (
+                <>
+                  {ungrouped.map(renderMarketCard)}
+
+                  {leagueNames.map((leagueName) => {
+                    const leagueMarkets = openMarkets.filter((m) => m.league === leagueName);
+                    const isExpanded = expandedLeagues.has(leagueName);
+                    const visible = isExpanded ? leagueMarkets : leagueMarkets.slice(0, CARDS_PER_LEAGUE_PREVIEW);
+                    return (
+                      <div key={leagueName} className="col-span-full flex flex-col gap-3">
+                        <h3 className={`text-sm font-bold ${t.textPrimary} mt-2`}>{leagueName}</h3>
+                        <div className={`grid gap-3 ${activeFilter === "SPORTS" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
+                          {visible.map(renderMarketCard)}
                         </div>
-                        {/* multi-segment probability bar -- same colors as
-                            the buttons below, each segment's width is that
-                            outcome's real, live price */}
-                        <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-                          {outcomeEntries.map(([name, price]) => (
-                            <div
-                              key={name}
-                              className={`h-full transition-all duration-500 ${barColorFor(name)}`}
-                              style={{ width: `${price}%` }}
-                            />
-                          ))}
-                          <div
-                            className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
-                            style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 mb-2">
-                        {outcomeEntries.map(([name]) => (
+                        {leagueMarkets.length > CARDS_PER_LEAGUE_PREVIEW && (
                           <button
-                            key={name}
-                            onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                            className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
+                            onClick={() => toggleLeague(leagueName)}
+                            className={`self-end text-xs font-medium ${t.textMuted} hover:${t.textPrimary} cursor-pointer bg-transparent border-none flex items-center gap-1`}
                           >
-                            {name}
+                            {isExpanded ? "Show fewer" : `View all ${leagueName} games`} <span>→</span>
                           </button>
-                        ))}
+                        )}
                       </div>
-                      <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
-                    </div>
-                  );
-                }
-
-                const isSelected = selectedFootballMarket?.id === m.id;
-                const selectFootball = (pickSide: "YES" | "NO") => {
-                  setSelectedFootballMarket(m);
-                  setSide(pickSide);
-                  setAmount(0);
-                  setFootballTradeStatus({ loading: false, error: null, success: null });
-                  setMobileSheetOpen(true);
-                };
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => router.push(`/market/${m.id}`)}
-                    className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${
-                      isSelected
-                        ? `${theme === "dark" ? "border-[#CCFF00] shadow-[#CCFF00]/20" : "border-blue-500 shadow-blue-100"} shadow-md`
-                        : `${t.border} hover:shadow-md`
-                    }`}
-                  >
-                    <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
-                    <p className={`text-xs ${t.textMuted} mb-3`}>
-                      ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
-                    </p>
-
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
-                          <span className={`text-xs ${t.textMuted}`}>YES</span>
-                        </div>
-                        <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_no ?? 0).toFixed(0)}e`} color="#EF4444" className="text-base font-bold" />
-                          <span className={`text-xs ${t.textMuted}`}>NO</span>
-                        </div>
-                      </div>
-                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
-                        {/* floating glow marker at the boundary between YES and NO */}
-                        <div
-                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
-                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
-                        onMouseEnter={() => setHoverSide("YES")}
-                        onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
-                      >
-                        Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
-                        onMouseEnter={() => setHoverSide("NO")}
-                        onMouseLeave={() => setHoverSide(null)}
-                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
-                      >
-                        Buy NO · {(m.price_no ?? 0).toFixed(0)}e
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </>
 
           {filtered.map((market, i) => (
             <div

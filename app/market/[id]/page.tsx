@@ -320,7 +320,7 @@ export default function MarketPage() {
         attributionLogo: false,
       },
       grid: {
-        horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
+        horzLines: { color: theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" },
         vertLines: { visible: false },
       },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
@@ -709,7 +709,7 @@ export default function MarketPage() {
 
           {/* CHART */}
           <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
-            <div style={{ height: 220, position: "relative" }} className="mb-3">
+            <div style={{ height: 280, position: "relative" }} className="mb-3">
               {!chartReady && (
                 <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading chart…</div>
               )}

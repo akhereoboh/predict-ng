@@ -155,6 +155,22 @@ export default function Home() {
       });
   }, []);
 
+  const [teamLogos, setTeamLogos] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch("https://sireai.uk/pm-api/team-logos")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => setTeamLogos(data))
+      .catch(() => {
+        // cards just show without a logo -- non-breaking either way
+      });
+  }, []);
+  // Case-insensitive lookup, since "Barcelona" and "barcelona" should
+  // both find the same saved logo.
+  const logoFor = (outcomeName: string): string | undefined => {
+    const match = Object.keys(teamLogos).find((k) => k.toLowerCase() === outcomeName.toLowerCase());
+    return match ? teamLogos[match] : undefined;
+  };
+
   const topLevelCategories = categories.filter((c) => !c.parent).map((c) => c.name);
   const subcategoriesForActive = categories.filter((c) => c.parent?.toUpperCase() === activeFilter.toUpperCase()).map((c) => c.name);
 
@@ -672,7 +688,13 @@ const price = selectedFootballMarket
             <div className="flex items-center justify-between gap-3 py-2 mb-2">
               <div className="flex flex-col gap-4 shrink-0">
                 {outcomeEntries.map(([name]) => (
-                  <span key={name} className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
+                  <div key={name} className="flex items-center gap-2">
+                    {logoFor(name) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoFor(name)} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    )}
+                    <span className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
+                  </div>
                 ))}
               </div>
               <div className="flex gap-2 flex-1 justify-end">

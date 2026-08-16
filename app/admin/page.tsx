@@ -108,11 +108,69 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // --- team logos ---
+  const [teamLogos, setTeamLogos] = useState<Record<string, string>>({});
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamLogoUrl, setNewTeamLogoUrl] = useState("");
+  const [teamLogoError, setTeamLogoError] = useState<string | null>(null);
+  const [savingTeamLogo, setSavingTeamLogo] = useState(false);
+
+  const fetchTeamLogos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/team-logos`);
+      if (!res.ok) return;
+      setTeamLogos(await res.json());
+    } catch {
+      // leave whatever we already had
+    }
+  }, []);
+
+  const handleSaveTeamLogo = async () => {
+    if (!newTeamName.trim() || !newTeamLogoUrl.trim()) {
+      setTeamLogoError("Enter both a team name and a logo URL.");
+      return;
+    }
+    setSavingTeamLogo(true);
+    setTeamLogoError(null);
+    try {
+      const token = await getValidToken();
+      if (!token) { setTeamLogoError("Not signed in."); setSavingTeamLogo(false); return; }
+      const res = await fetch(`${API_BASE}/admin/team-logos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newTeamName.trim(), logo_url: newTeamLogoUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setTeamLogoError(data.detail || "Couldn't save."); setSavingTeamLogo(false); return; }
+      setNewTeamName("");
+      setNewTeamLogoUrl("");
+      await fetchTeamLogos();
+    } catch {
+      setTeamLogoError("Network error — try again.");
+    } finally {
+      setSavingTeamLogo(false);
+    }
+  };
+
+  const handleDeleteTeamLogo = async (name: string) => {
+    try {
+      const token = await getValidToken();
+      if (!token) return;
+      await fetch(`${API_BASE}/admin/team-logos/${encodeURIComponent(name)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await fetchTeamLogos();
+    } catch {
+      // leave the list as-is, they can retry
+    }
+  };
+
   useEffect(() => {
     if (!isLoggedIn) return;
-    const kick = requestAnimationFrame(() => fetchCategories());
+    const kick = requestAnimationFrame(() => { fetchCategories(); fetchTeamLogos(); });
     return () => cancelAnimationFrame(kick);
-  }, [isLoggedIn, fetchCategories]);
+  }, [isLoggedIn, fetchCategories, fetchTeamLogos]);
 
   // Reset subcategory whenever the top-level category changes -- an old
   // subcategory selection from a different category shouldn't carry over.
@@ -784,6 +842,64 @@ export default function AdminPage() {
             >
               {creatingMulti ? "…" : "Create market"}
             </button>
+          )}
+        </div>
+
+        {/* TEAM LOGOS */}
+        <div className={`${t.cardBg} border ${t.border} rounded-xl p-5 mb-6 shadow-sm`}>
+          <h2 className={`text-base font-bold ${t.textPrimary} mb-1`}>Team logos</h2>
+          <p className={`text-xs ${t.textMuted} mb-4`}>
+            Save a logo once per team name (e.g. exactly &quot;Barcelona&quot;) — any market whose outcome matches that name shows this logo automatically, no need to re-link it per market.
+          </p>
+
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Team name (e.g. Barcelona)"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+            />
+            <input
+              type="text"
+              placeholder="Logo URL"
+              value={newTeamLogoUrl}
+              onChange={(e) => setNewTeamLogoUrl(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+            />
+            <button
+              onClick={handleSaveTeamLogo}
+              disabled={savingTeamLogo}
+              className={`shrink-0 px-4 rounded-lg text-sm font-medium border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
+            >
+              {savingTeamLogo ? "…" : "Save"}
+            </button>
+          </div>
+          {teamLogoError && <p className="text-xs text-red-500 mb-2">{teamLogoError}</p>}
+
+          {Object.keys(teamLogos).length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {Object.entries(teamLogos).map(([name, url]) => (
+                <div key={name} className={`flex items-center gap-2 pl-2 pr-1 py-1 rounded-full border ${t.border} ${t.inputBg}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                  <span className={`text-xs ${t.textPrimary}`}>{name}</span>
+                  <button
+                    onClick={() => handleDeleteTeamLogo(name)}
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${t.textMuted} cursor-pointer bg-transparent border-none`}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

@@ -283,6 +283,14 @@ export default function MarketPage() {
   const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);          // binary markets: one line
   const multiSeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map()); // multi-outcome: one line per outcome
   const multiLabelRefs = useRef<Map<string, HTMLDivElement>>(new Map());     // floating name+% labels, one per outcome
+  // Two invisible series with a single point each, always kept at 20 and
+  // 80. Auto-scale considers every series' data when computing bounds, so
+  // these force the visible range to never be narrower than 20-80% --
+  // matching how Polymarket's own charts never show a razor-thin band
+  // around 50% -- while still letting the range grow further if real
+  // trading genuinely pushes prices outside 20-80.
+  const anchorTopRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const anchorBottomRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [chartReady, setChartReady] = useState(false);
 
   // Same hash-based color system used on the homepage cards, so a team's
@@ -339,6 +347,15 @@ export default function MarketPage() {
     chartApiRef.current = chart;
     seriesRef.current = series;
     const multiSeriesMap = multiSeriesRef.current;
+
+    const now0 = Math.floor(Date.now() / 1000) as UTCTimestamp;
+    const anchorTop = chart.addSeries(LineSeries, { color: "transparent", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const anchorBottom = chart.addSeries(LineSeries, { color: "transparent", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    anchorTop.setData([{ time: now0, value: 80 }]);
+    anchorBottom.setData([{ time: now0, value: 20 }]);
+    anchorTopRef.current = anchorTop;
+    anchorBottomRef.current = anchorBottom;
+
     setChartReady(true);
 
     const handleResize = () => {
@@ -350,6 +367,8 @@ export default function MarketPage() {
       chart.remove();
       chartApiRef.current = null;
       seriesRef.current = null;
+      anchorTopRef.current = null;
+      anchorBottomRef.current = null;
       multiSeriesMap.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -449,6 +468,8 @@ export default function MarketPage() {
         setRealMarket(data);
         setRealIsClosed(data.status !== "OPEN" || (!!data.close_at && new Date(data.close_at).getTime() <= Date.now()));
         const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
+        anchorTopRef.current?.update({ time: now, value: 80 });
+        anchorBottomRef.current?.update({ time: now, value: 20 });
         if (data.prices) {
           for (const [name, price] of Object.entries(data.prices)) {
             const s = multiSeriesRef.current.get(name);

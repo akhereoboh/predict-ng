@@ -11,8 +11,9 @@ type AdminMarket = {
   question: string;
   status: string;
   winner: string | null;
-  price_yes: number;
-  price_no: number;
+  price_yes: number | null;
+  price_no: number | null;
+  outcomes: Record<string, number> | null;
   market_type: string;
   close_at: string | null;
   volume_naira: number;
@@ -22,6 +23,7 @@ type AdminMarket = {
 type CreateResult = {
   market_id: string;
   category: string;
+  outcomes?: string[];
   b: number;
   house_funding_naira: number;
   max_loss_naira: number;
@@ -171,6 +173,18 @@ export default function AdminPage() {
 
   // --- create form state ---
   const [entries, setEntries] = useState<{ question: string; closeAt: string }[]>([{ question: "", closeAt: "" }]);
+
+  // --- multi-outcome market creation (separate, single-market mode --
+  // batch-creating several multi-outcome markets at once, each with its
+  // own outcome list, adds a lot of UI complexity for a rare workflow;
+  // this keeps the common binary batch-create flow above untouched) ---
+  const [multiOutcomeMode, setMultiOutcomeMode] = useState(false);
+  const [multiQuestion, setMultiQuestion] = useState("");
+  const [multiCloseAt, setMultiCloseAt] = useState("");
+  const [outcomeNames, setOutcomeNames] = useState<string[]>(["", ""]);
+  const [creatingMulti, setCreatingMulti] = useState(false);
+  const [multiCreateError, setMultiCreateError] = useState<string | null>(null);
+  const [multiCreateResult, setMultiCreateResult] = useState<CreateResult | null>(null);
   const [totalBudget, setTotalBudget] = useState(100000);
   const [maxConcurrent, setMaxConcurrent] = useState(10);
   const [creating, setCreating] = useState(false);
@@ -283,7 +297,78 @@ export default function AdminPage() {
     setCreating(false);
   };
 
-  const handlePropose = async (marketId: string, winner: "YES" | "NO") => {
+  const handleCreateMulti = async () => {
+    const validOutcomes = outcomeNames.map((o) => o.trim()).filter(Boolean);
+    if (!multiQuestion.trim()) {
+      setMultiCreateError("Enter a question first.");
+      return;
+    }
+    if (!multiCloseAt) {
+      setMultiCreateError("Pick a close time first.");
+      return;
+    }
+    if (validOutcomes.length < 2) {
+      setMultiCreateError("Enter at least 2 outcome names.");
+      return;
+    }
+    if (new Set(validOutcomes).size !== validOutcomes.length) {
+      setMultiCreateError("Outcome names must be unique.");
+      return;
+    }
+    const effectiveCategory = subcategory ? `${category}_${subcategory}` : category;
+    setCreatingMulti(true);
+    setMultiCreateError(null);
+    setMultiCreateResult(null);
+
+    const token = await getValidToken();
+    if (!token) {
+      setMultiCreateError("Not signed in.");
+      setCreatingMulti(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/markets/smart-create-multi`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          category: effectiveCategory,
+          question: multiQuestion.trim(),
+          outcomes: validOutcomes,
+          close_at: new Date(multiCloseAt).toISOString(),
+          total_budget_naira: totalBudget,
+          max_concurrent: maxConcurrent,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMultiCreateError(data.detail || "Couldn't create the market.");
+        setCreatingMulti(false);
+        return;
+      }
+      setMultiCreateResult(data);
+      setMultiQuestion("");
+      setMultiCloseAt("");
+      setOutcomeNames(["", ""]);
+      fetchMarkets();
+    } catch {
+      setMultiCreateError("Network error — try again.");
+    } finally {
+      setCreatingMulti(false);
+    }
+  };
+
+  const updateOutcomeName = (index: number, value: string) => {
+    setOutcomeNames((prev) => prev.map((o, i) => (i === index ? value : o)));
+  };
+
+  const addOutcomeField = () => setOutcomeNames((prev) => [...prev, ""]);
+
+  const removeOutcomeField = (index: number) => {
+    setOutcomeNames((prev) => (prev.length > 2 ? prev.filter((_, i) => i !== index) : prev));
+  };
+
+  const handlePropose = async (marketId: string, winner: string) => {
     setActionStatus((s) => ({ ...s, [marketId]: { loading: true, error: null } }));
     try {
       const token = await getValidToken();
@@ -410,6 +495,25 @@ export default function AdminPage() {
         <div className={`${t.cardBg} border ${t.border} rounded-xl p-5 mb-6 shadow-sm`}>
           <h2 className={`text-base font-bold ${t.textPrimary} mb-4`}>Create a market</h2>
 
+          <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
+            <button
+              onClick={() => setMultiOutcomeMode(false)}
+              className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                !multiOutcomeMode ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
+              }`}
+            >
+              Yes / No
+            </button>
+            <button
+              onClick={() => setMultiOutcomeMode(true)}
+              className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                multiOutcomeMode ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
+              }`}
+            >
+              Named outcomes (2 or more)
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className={`text-xs ${t.textMuted} block mb-1`}>Category</label>
@@ -502,41 +606,94 @@ export default function AdminPage() {
 
           {categoryError && <p className="text-xs text-red-500 mb-3">{categoryError}</p>}
 
-          <label className={`text-xs ${t.textMuted} block mb-1`}>Markets to create</label>
-          <div className="flex flex-col gap-2 mb-2">
-            {entries.map((entry, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <input
-                  type="text"
-                  placeholder="Will Barcelona beat Real Madrid on Aug 20, 2026?"
-                  value={entry.question}
-                  onChange={(e) => updateEntry(i, "question", e.target.value)}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
-                />
-                <input
-                  type="datetime-local"
-                  value={entry.closeAt}
-                  onChange={(e) => updateEntry(i, "closeAt", e.target.value)}
-                  className={`w-44 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
-                />
-                {entries.length > 1 && (
-                  <button
-                    onClick={() => removeEntry(i)}
-                    className={`shrink-0 w-9 h-9 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
-                    title="Remove this market"
-                  >
-                    ×
-                  </button>
-                )}
+          {!multiOutcomeMode ? (
+            <>
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Markets to create</label>
+              <div className="flex flex-col gap-2 mb-2">
+                {entries.map((entry, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <input
+                      type="text"
+                      placeholder="Will Barcelona beat Real Madrid on Aug 20, 2026?"
+                      value={entry.question}
+                      onChange={(e) => updateEntry(i, "question", e.target.value)}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                    />
+                    <input
+                      type="datetime-local"
+                      value={entry.closeAt}
+                      onChange={(e) => updateEntry(i, "closeAt", e.target.value)}
+                      className={`w-44 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                    />
+                    {entries.length > 1 && (
+                      <button
+                        onClick={() => removeEntry(i)}
+                        className={`shrink-0 w-9 h-9 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
+                        title="Remove this market"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <button
-            onClick={addEntry}
-            className={`text-xs font-medium px-3 py-1.5 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent mb-4`}
-          >
-            + Add another market
-          </button>
+              <button
+                onClick={addEntry}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent mb-4`}
+              >
+                + Add another market
+              </button>
+            </>
+          ) : (
+            <>
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Question</label>
+              <input
+                type="text"
+                placeholder="Who wins Barcelona vs Real Madrid on Aug 20, 2026?"
+                value={multiQuestion}
+                onChange={(e) => setMultiQuestion(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+              />
+
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Trading closes at</label>
+              <input
+                type="datetime-local"
+                value={multiCloseAt}
+                onChange={(e) => setMultiCloseAt(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+              />
+
+              <label className={`text-xs ${t.textMuted} block mb-1`}>Outcomes (2 or more — not limited to 2 or 3)</label>
+              <div className="flex flex-col gap-2 mb-2">
+                {outcomeNames.map((name, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder={`Outcome ${i + 1} (e.g. Barcelona)`}
+                      value={name}
+                      onChange={(e) => updateOutcomeName(i, e.target.value)}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
+                    />
+                    {outcomeNames.length > 2 && (
+                      <button
+                        onClick={() => removeOutcomeField(i)}
+                        className={`shrink-0 w-9 h-9 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
+                        title="Remove this outcome"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={addOutcomeField}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border ${t.border} ${t.textMuted} cursor-pointer bg-transparent mb-4`}
+              >
+                + Add another outcome
+              </button>
+            </>
+          )}
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
@@ -577,19 +734,39 @@ export default function AdminPage() {
             </div>
           )}
 
+          {multiCreateError && <p className="text-xs text-red-500 mb-3">{multiCreateError}</p>}
+          {multiCreateResult && (
+            <div className={`text-xs ${t.textMuted} mb-3 p-3 rounded-lg ${t.inputBg}`}>
+              <p className={`${t.textPrimary} font-medium mb-1`}>
+                {multiCreateResult.market_id} — outcomes: {multiCreateResult.outcomes?.join(", ")}
+              </p>
+              <p>b = {multiCreateResult.b} · house funding = ₦{multiCreateResult.house_funding_naira.toLocaleString()} · max loss = ₦{multiCreateResult.max_loss_naira.toLocaleString()}</p>
+            </div>
+          )}
+
           {(addingCategory || addingSubcategory) && (
             <p className="text-xs text-amber-500 mb-2">
               Finish adding the new {addingCategory ? "category" : "sub-category"} first — click &quot;Add&quot; or &quot;×&quot; above before creating a market.
             </p>
           )}
 
-          <button
-            onClick={handleCreate}
-            disabled={creating || addingCategory || addingSubcategory}
-            className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
-          >
-            {creating ? "…" : entries.filter((e) => e.question.trim() && e.closeAt).length > 1 ? `Create ${entries.filter((e) => e.question.trim() && e.closeAt).length} markets` : "Create market"}
-          </button>
+          {!multiOutcomeMode ? (
+            <button
+              onClick={handleCreate}
+              disabled={creating || addingCategory || addingSubcategory}
+              className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
+            >
+              {creating ? "…" : entries.filter((e) => e.question.trim() && e.closeAt).length > 1 ? `Create ${entries.filter((e) => e.question.trim() && e.closeAt).length} markets` : "Create market"}
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateMulti}
+              disabled={creatingMulti || addingCategory || addingSubcategory}
+              className={`w-full py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50 ${t.accent} text-white`}
+            >
+              {creatingMulti ? "…" : "Create market"}
+            </button>
+          )}
         </div>
 
         {/* MANAGE MARKETS */}
@@ -611,28 +788,46 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <p className={`text-xs ${t.textMuted} mb-2`}>
-                    {m.id} · {m.status}{m.winner ? ` · winner: ${m.winner}` : ""} · YES {m.price_yes.toFixed(1)}% / NO {m.price_no.toFixed(1)}%
+                    {m.id} · {m.status}{m.winner ? ` · winner: ${m.winner}` : ""} ·{" "}
+                    {m.outcomes
+                      ? Object.entries(m.outcomes).map(([name, price]) => `${name} ${price.toFixed(1)}%`).join(" / ")
+                      : `YES ${(m.price_yes ?? 0).toFixed(1)}% / NO ${(m.price_no ?? 0).toFixed(1)}%`}
                     {m.close_at ? ` · closes ${new Date(m.close_at).toLocaleString()}` : ""}
                   </p>
 
                   {status?.error && <p className="text-xs text-red-500 mb-2">{status.error}</p>}
 
                   {m.status === "OPEN" && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handlePropose(m.id, "YES")}
-                        disabled={status?.loading}
-                        className="text-xs px-3 py-1.5 rounded-md bg-green-500 hover:bg-green-400 text-black font-medium cursor-pointer border-none disabled:opacity-50"
-                      >
-                        Propose YES
-                      </button>
-                      <button
-                        onClick={() => handlePropose(m.id, "NO")}
-                        disabled={status?.loading}
-                        className="text-xs px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-400 text-white font-medium cursor-pointer border-none disabled:opacity-50"
-                      >
-                        Propose NO
-                      </button>
+                    <div className="flex gap-2 flex-wrap">
+                      {m.outcomes ? (
+                        Object.keys(m.outcomes).map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => handlePropose(m.id, name)}
+                            disabled={status?.loading}
+                            className={`text-xs px-3 py-1.5 rounded-md ${t.accent} text-white font-medium cursor-pointer border-none disabled:opacity-50`}
+                          >
+                            Propose {name}
+                          </button>
+                        ))
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handlePropose(m.id, "YES")}
+                            disabled={status?.loading}
+                            className="text-xs px-3 py-1.5 rounded-md bg-green-500 hover:bg-green-400 text-black font-medium cursor-pointer border-none disabled:opacity-50"
+                          >
+                            Propose YES
+                          </button>
+                          <button
+                            onClick={() => handlePropose(m.id, "NO")}
+                            disabled={status?.loading}
+                            className="text-xs px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-400 text-white font-medium cursor-pointer border-none disabled:opacity-50"
+                          >
+                            Propose NO
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 

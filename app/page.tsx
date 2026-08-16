@@ -800,29 +800,25 @@ const price = selectedFootballMarket
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
-                  <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
+                  <div className={`relative flex-1 h-1 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
                     <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-green-400" : t.accent}`} style={{ width: `${yes}%` }} />
+                    <div
+                      className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)] transition-all duration-500 animate-pulse"
+                      style={{ left: `${yes}%`, transform: "translate(-50%, -50%)" }}
+                    />
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                      theme === "dark"
-                        ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
-                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    }`}
+                    className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-green-500 hover:bg-green-400 text-black"
                   >
                     Buy Up · {Math.round(yes)}e
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                      theme === "dark"
-                        ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                        : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
-                    }`}
+                    className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                   >
                     Buy Down · {Math.round(no)}e
                   </button>
@@ -929,8 +925,13 @@ const price = selectedFootballMarket
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
-                      <div className={`flex-1 h-0.5 rounded-full overflow-hidden ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${m.price_yes}%` }} />
+                      <div className={`relative flex-1 h-1 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
+                        <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${m.price_yes ?? 50}%` }} />
+                        {/* floating glow marker at the boundary between YES and NO */}
+                        <div
+                          className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)] transition-all duration-500 animate-pulse"
+                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
+                        />
                       </div>
                     </div>
 
@@ -939,11 +940,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                         onMouseEnter={() => setHoverSide("YES")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                          theme === "dark"
-                            ? "border-white/40 bg-black text-white hover:bg-green-500 hover:text-black hover:border-green-500"
-                            : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                        }`}
+                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-green-500 hover:bg-green-400 text-black"
                       >
                         Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
                       </button>
@@ -951,11 +948,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
                         onMouseEnter={() => setHoverSide("NO")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
-                          theme === "dark"
-                            ? "border-white/40 bg-black text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                            : "bg-[#FDF4F4] text-[#7A1010] border-[#A52020] hover:bg-[#6B0D0D] hover:text-white hover:border-[#6B0D0D]"
-                        }`}
+                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                       >
                         Buy NO · {(m.price_no ?? 0).toFixed(0)}e
                       </button>

@@ -707,7 +707,7 @@ const price = selectedFootballMarket
                     key={name}
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
                     className={`rounded-lg font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
-                      outcomeEntries.length <= 2 ? "px-7 py-2.5 text-sm" : "px-5 py-2 text-xs"
+                      outcomeEntries.length <= 2 ? "px-7 py-2.5 text-sm min-w-[7.5rem]" : "px-5 py-2 text-xs min-w-[6rem]"
                     } ${sportsPillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {Math.floor(price)}e

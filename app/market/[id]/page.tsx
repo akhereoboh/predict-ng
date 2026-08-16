@@ -276,6 +276,7 @@ export default function MarketPage() {
     no: [0.67, 0.68, 0.69, 0.70].map((p) => ({ p, qty: Math.floor(Math.random() * 500 + 100) })),
   }));
   const [realTradeStatus, setRealTradeStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
+  const [selectedRealOutcome, setSelectedRealOutcome] = useState<string | null>(null);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
@@ -459,6 +460,45 @@ export default function MarketPage() {
     };
   }, [isRealMarket, id]);
 
+  useEffect(() => {
+    if (!realMarket?.prices || selectedRealOutcome) return;
+    const firstOutcome = Object.keys(realMarket.prices)[0];
+    const id = requestAnimationFrame(() => setSelectedRealOutcome(firstOutcome));
+    return () => cancelAnimationFrame(id);
+  }, [realMarket?.prices, selectedRealOutcome]);
+
+  const handleRealMultiBuy = async () => {
+    if (!realMarket || !selectedRealOutcome || !realMarket.prices) return;
+    if (!isLoggedIn) { setShowAuthModal(true); return; }
+    const priceFraction = (realMarket.prices[selectedRealOutcome] ?? 100 / Object.keys(realMarket.prices).length) / 100;
+    const estContracts = Math.max(1, Math.round(amount / priceFraction));
+    setRealTradeStatus({ loading: true, error: null, success: null });
+    try {
+      const token = await getValidToken();
+      if (!token) {
+        setShowAuthModal(true);
+        setRealTradeStatus({ loading: false, error: null, success: null });
+        return;
+      }
+      const res = await fetch("https://sireai.uk/pm-api/trade/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ market_id: realMarket.id, outcome: selectedRealOutcome, contracts: estContracts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRealTradeStatus({ loading: false, error: data.detail || "Trade failed", success: null });
+        return;
+      }
+      setRealTradeStatus({ loading: false, error: null, success: `Bought ${estContracts} ${selectedRealOutcome} for ₦${data.paid_naira.toFixed(2)}` });
+      await refreshPortfolio();
+      setRealMarket((prev) => prev && ({ ...prev, prices: data.prices }));
+      setTimeout(() => setRealTradeStatus({ loading: false, error: null, success: null }), 4000);
+    } catch {
+      setRealTradeStatus({ loading: false, error: "Network error — try again", success: null });
+    }
+  };
+
   const handleRealBuy = async () => {
     if (!realMarket) return;
     if (!isLoggedIn) { setShowAuthModal(true); return; }
@@ -491,7 +531,9 @@ export default function MarketPage() {
     }
   };
 
-  const price = isRealMarket && realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : (side === "YES" ? market.yesPrice : market.noPrice);
+  const price = realMarket?.prices && selectedRealOutcome
+    ? (realMarket.prices[selectedRealOutcome] ?? 100 / Object.keys(realMarket.prices).length) / 100
+    : isRealMarket && realMarket ? (side === "YES" ? realMarket.price_yes : realMarket.price_no) / 100 : (side === "YES" ? market.yesPrice : market.noPrice);
   const payout = (amount / price).toFixed(2);
   const fee = (amount * 0.02).toFixed(2);
 
@@ -710,22 +752,44 @@ export default function MarketPage() {
               {realTradeStatus.error && <p className="text-xs text-red-500 mb-1 text-center">{realTradeStatus.error}</p>}
               {realTradeStatus.success && <p className="text-xs text-green-500 mb-1 text-center">{realTradeStatus.success}</p>}
 
-              <div className="flex gap-2 mb-2">
-                <button onClick={() => setSide("YES")}
-                  className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                    side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
-                  }`}
-                >
-                  Up {realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e
-                </button>
-                <button onClick={() => setSide("NO")}
-                  className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                    side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
-                  }`}
-                >
-                  Down {realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e
-                </button>
-              </div>
+              {realMarket?.prices ? (
+                <div className="flex gap-2 mb-2 flex-wrap">
+                  {Object.entries(realMarket.prices).map(([name, p], i) => {
+                    const outcomeNames = Object.keys(realMarket.prices!);
+                    const color = colorForOutcome(name, i, outcomeNames[0]);
+                    const isSelected = selectedRealOutcome === name;
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => setSelectedRealOutcome(name)}
+                        style={isSelected ? { backgroundColor: color } : undefined}
+                        className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors whitespace-nowrap px-2 ${
+                          isSelected ? "text-white" : `${t.inputBg} ${t.textMuted}`
+                        }`}
+                      >
+                        {name} {(p / 100).toFixed(2)}e
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex gap-2 mb-2">
+                  <button onClick={() => setSide("YES")}
+                    className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                      side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
+                    }`}
+                  >
+                    Up {realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e
+                  </button>
+                  <button onClick={() => setSide("NO")}
+                    className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
+                      side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
+                    }`}
+                  >
+                    Down {realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e
+                  </button>
+                </div>
+              )}
 
               <div className="flex justify-between items-center mb-2">
                 <span className={`text-xs ${t.textMuted}`}>{amount}.00e cash</span>
@@ -771,20 +835,24 @@ export default function MarketPage() {
               )}
 
               <div className="text-center py-1 mb-1">
-                <span className={`text-xs ${t.textMuted}`}>Potential win if {side}: </span>
+                <span className={`text-xs ${t.textMuted}`}>Potential win if {realMarket?.prices ? selectedRealOutcome : side}: </span>
                 <span className={`text-sm font-bold ${t.accentText}`}>{payout}e</span>
                 <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
               </div>
 
               {!realIsClosed && (
                 <button
-                  onClick={() => { if (!isLoggedIn) { setShowAuthModal(true); return; } handleRealBuy(); }}
+                  onClick={() => {
+                    if (!isLoggedIn) { setShowAuthModal(true); return; }
+                    if (realMarket?.prices) handleRealMultiBuy(); else handleRealBuy();
+                  }}
                   disabled={realTradeStatus.loading}
+                  style={realMarket?.prices && selectedRealOutcome ? { backgroundColor: colorForOutcome(selectedRealOutcome, Object.keys(realMarket.prices).indexOf(selectedRealOutcome), Object.keys(realMarket.prices)[0]) } : undefined}
                   className={`w-full h-11 rounded-xl text-sm font-bold border-none cursor-pointer disabled:opacity-50 ${
-                    theme === "dark" ? (side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white") : `${t.accent} text-white`
+                    realMarket?.prices ? "text-white" : theme === "dark" ? (side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white") : `${t.accent} text-white`
                   }`}
                 >
-                  {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${side}`}
+                  {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${realMarket?.prices ? selectedRealOutcome : side}`}
                 </button>
               )}
             </div>

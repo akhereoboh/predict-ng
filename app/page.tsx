@@ -657,18 +657,35 @@ const price = selectedFootballMarket
             </span>
           </div>
 
-          {/* name + % rows -- the first thing under the title,
-              same info as the price/bar section below, just
-              laid out to read at a glance before you even look
-              at the bar */}
-          <div className="flex flex-col gap-0.5 mb-3">
-            {outcomeEntries.map(([name, price]) => (
-              <div key={name} className="flex items-center justify-between text-sm">
-                <span className={`font-medium ${t.textPrimary}`}>{name}</span>
-                <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
-              </div>
-            ))}
-          </div>
+          {activeFilter !== "SPORTS" && (
+            /* name + % rows -- the first thing under the title, same info
+               as the price/bar section below, just laid out to read at a
+               glance before you even look at the bar. Skipped in the
+               Sports section, where the buttons themselves already carry
+               name + price and this would be redundant. */
+            <div className="flex flex-col gap-0.5 mb-3">
+              {outcomeEntries.map(([name, price]) => (
+                <div key={name} className="flex items-center justify-between text-sm">
+                  <span className={`font-medium ${t.textPrimary}`}>{name}</span>
+                  <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeFilter === "SPORTS" && (
+            <div className="flex gap-2 mb-3">
+              {outcomeEntries.map(([name]) => (
+                <button
+                  key={name}
+                  onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                  className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-3 mb-3">
             <div className="flex gap-3">
@@ -684,7 +701,7 @@ const price = selectedFootballMarket
               ))}
             </div>
             {/* multi-segment probability bar -- same colors as
-                the buttons below, each segment's width is that
+                the buttons, each segment's width is that
                 outcome's real, live price */}
             <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
               {outcomeEntries.map(([name, price]) => (
@@ -701,17 +718,19 @@ const price = selectedFootballMarket
             </div>
           </div>
 
-          <div className="flex gap-2 mb-2">
-            {outcomeEntries.map(([name]) => (
-              <button
-                key={name}
-                onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+          {activeFilter !== "SPORTS" && (
+            <div className="flex gap-2 mb-2">
+              {outcomeEntries.map(([name]) => (
+                <button
+                  key={name}
+                  onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                  className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
           <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
         </div>
       );

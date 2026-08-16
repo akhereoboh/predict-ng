@@ -282,6 +282,7 @@ export default function MarketPage() {
   const chartApiRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);          // binary markets: one line
   const multiSeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map()); // multi-outcome: one line per outcome
+  const multiLabelRefs = useRef<Map<string, HTMLDivElement>>(new Map());     // floating name+% labels, one per outcome
   const [chartReady, setChartReady] = useState(false);
 
   // Same hash-based color system used on the homepage cards, so a team's
@@ -314,19 +315,19 @@ export default function MarketPage() {
         horzLines: { color: theme === "dark" ? "#1E1E1E" : "#EEF2F6" },
         vertLines: { visible: false },
       },
-      rightPriceScale: { borderVisible: false, autoScale: false },
+      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.3, bottom: 0.3 } },
       timeScale: { borderVisible: false, timeVisible: true },
       crosshair: { horzLine: { visible: false }, vertLine: { visible: false } },
       handleScroll: false,
       handleScale: false,
     });
-    // Prices here are always 0-100% probabilities -- fixing the visible
-    // range to exactly that (instead of auto-scaling to whatever tiny
-    // range the actual data happens to occupy) means a brand-new market
-    // sitting at 50/50 genuinely renders in the vertical middle of the
-    // chart, with real headroom to show movement as it happens, instead
-    // of a razor-thin auto-zoomed sliver around 50.
-    chart.priceScale("right").setVisibleRange({ from: 0, to: 100 });
+    // NOTE: an earlier attempt to hard-lock this to a 0-100 range via
+    // autoScale:false + setVisibleRange() actually broke the axis (it
+    // rendered 0-120 instead of a clean 0-100, and made the grid lines
+    // render bright instead of faint). Reverted to the standard, safe
+    // approach: real autoScale, with generous top/bottom margins so a
+    // fresh 50/50 market still shows with real headroom instead of a
+    // razor-thin auto-zoomed sliver.
     const series = chart.addSeries(LineSeries, {
       color: "#CCFF00",
       lineWidth: 2,
@@ -356,9 +357,11 @@ export default function MarketPage() {
 
   // Multi-outcome markets: once we know the real outcome names (from the
   // first poll), create one line series per outcome, each colored to
-  // match its card color, with a title label on the line itself --
-  // that's the actual "Legacy 99.9%" style label from the reference,
-  // built into the charting library, not a custom overlay.
+  // match its card color. Built-in price-line labels are OFF here --
+  // that style is a small colored badge, not the reference's floating
+  // "Name / big bold %" label. That's built as a custom HTML overlay
+  // below, positioned via the chart's own coordinate conversion (same
+  // technique as the BTC page's radar-blip marker).
   useEffect(() => {
     if (!chartReady || !chartApiRef.current || !realMarket?.prices) return;
     if (multiSeriesRef.current.size > 0) return; // already created
@@ -368,11 +371,9 @@ export default function MarketPage() {
       const s = chartApiRef.current!.addSeries(LineSeries, {
         color,
         lineWidth: 2,
-        priceLineVisible: true,
-        priceLineColor: color,
-        lastValueVisible: true,
+        priceLineVisible: false,
+        lastValueVisible: false,
         crosshairMarkerVisible: false,
-        title: name,
       });
       multiSeriesRef.current.set(name, s);
     });
@@ -450,7 +451,20 @@ export default function MarketPage() {
         const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
         if (data.prices) {
           for (const [name, price] of Object.entries(data.prices)) {
-            multiSeriesRef.current.get(name)?.update({ time: now, value: price });
+            const s = multiSeriesRef.current.get(name);
+            s?.update({ time: now, value: price });
+            const labelEl = multiLabelRefs.current.get(name);
+            if (s && labelEl && chartApiRef.current) {
+              const x = chartApiRef.current.timeScale().timeToCoordinate(now);
+              const y = s.priceToCoordinate(price);
+              if (x != null && y != null) {
+                labelEl.style.left = `${x + 8}px`;
+                labelEl.style.top = `${y}px`;
+                labelEl.style.visibility = "visible";
+              } else {
+                labelEl.style.visibility = "hidden";
+              }
+            }
           }
         } else {
           seriesRef.current?.update({ time: now, value: data.price_yes });
@@ -674,11 +688,26 @@ export default function MarketPage() {
 
           {/* CHART */}
           <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
-            <div style={{ height: 160 }} className="mb-3">
+            <div style={{ height: 220, position: "relative" }} className="mb-3">
               {!chartReady && (
                 <div className={`h-full flex items-center justify-center text-sm ${t.textMuted}`}>Loading chart…</div>
               )}
               <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
+              {realMarket?.prices && Object.keys(realMarket.prices).map((name, i) => {
+                const outcomeNames = Object.keys(realMarket.prices!);
+                const color = colorForOutcome(name, i, outcomeNames[0]);
+                return (
+                  <div
+                    key={name}
+                    // eslint-disable-next-line react-hooks/refs -- storing a DOM ref for later use in the polling effect, not reading render-time state
+                    ref={(el) => { if (el) multiLabelRefs.current.set(name, el); else multiLabelRefs.current.delete(name); }}
+                    style={{ position: "absolute", visibility: "hidden", transform: "translateY(-50%)", pointerEvents: "none", zIndex: 10 }}
+                  >
+                    <div className="text-xs" style={{ color }}>{name}</div>
+                    <div className="text-lg font-bold leading-tight" style={{ color }}>{Math.floor(realMarket.prices![name])}%</div>
+                  </div>
+                );
+              })}
             </div>
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-3 text-xs ${t.textMuted}`}>
@@ -853,22 +882,31 @@ export default function MarketPage() {
 
               {!editing && (
                 <div className="flex gap-2 mb-2">
-                  {customAmounts.map((a) => (
-                    <button key={a} onClick={() => setAmount(a)}
-                      className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
-                        amount === a
-                          ? theme === "dark"
-                            ? side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
-                            : `${t.amountActive} ${t.amountActiveText}`
-                          : `${t.inputBg} ${t.textPrimary}`
-                      }`}
-                    >
-                      <span className="text-sm font-bold">{a}e</span>
-                      <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-emerald-500"}`}>
-                        win {price > 0 ? (a / price).toFixed(0) : "0"}e
-                      </span>
-                    </button>
-                  ))}
+                  {customAmounts.map((a) => {
+                    const isActive = amount === a;
+                    const multiColor = realMarket?.prices && selectedRealOutcome
+                      ? colorForOutcome(selectedRealOutcome, Object.keys(realMarket.prices).indexOf(selectedRealOutcome), Object.keys(realMarket.prices)[0])
+                      : null;
+                    return (
+                      <button key={a} onClick={() => setAmount(a)}
+                        style={isActive && multiColor ? { backgroundColor: multiColor } : undefined}
+                        className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
+                          isActive
+                            ? multiColor
+                              ? "text-white"
+                              : theme === "dark"
+                                ? side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                                : `${t.amountActive} ${t.amountActiveText}`
+                            : `${t.inputBg} ${t.textPrimary}`
+                        }`}
+                      >
+                        <span className="text-sm font-bold">{a}e</span>
+                        <span className={`text-xs ${isActive ? (multiColor ? "text-white/80" : t.amountActiveSub) : "text-emerald-500"}`}>
+                          win {price > 0 ? (a / price).toFixed(0) : "0"}e
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 

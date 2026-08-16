@@ -725,7 +725,7 @@ const price = selectedFootballMarket
       {/* BODY */}
       <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 pb-20">
         {/* LEFT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full items-start">
+        <div className={`grid grid-cols-1 ${activeFilter === "SPORTS" ? "" : "md:grid-cols-2"} gap-3 w-full items-start`}>
           {(activeFilter === "All" || activeFilter === "CRYPTO") && (() => {
             const yes = btcLive?.price_yes ?? 50;
             const no = btcLive?.price_no ?? 50;
@@ -849,6 +849,44 @@ const price = selectedFootballMarket
                   // light mode -- same accent that highlights the active
                   // nav pill), then a neutral gray for a third ("Draw",
                   // typically) and beyond.
+                  // Exactly-2-outcome markets (like Barca vs Real Madrid)
+                  // keep the fixed red/accent-green treatment already
+                  // approved -- unchanged. 3+ outcome markets (typically a
+                  // team/Draw/team football market) get a richer, more
+                  // varied palette instead, since two colors read as flat
+                  // once there's a third option -- matching the visual
+                  // variety in the Polymarket sports reference. Any
+                  // outcome literally named "Draw" always stays neutral
+                  // gray regardless of position, since that's the one
+                  // outcome that should never look like a "pick."
+                  const isBinary = outcomeEntries.length === 2;
+                  const RICH_PILL_COLORS = [
+                    "bg-red-600 hover:bg-red-500 text-white",
+                    "bg-amber-500 hover:bg-amber-400 text-black",
+                    `${theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white"} hover:opacity-90`,
+                    "bg-purple-600 hover:bg-purple-500 text-white",
+                    "bg-pink-600 hover:bg-pink-500 text-white",
+                    "bg-cyan-600 hover:bg-cyan-500 text-white",
+                  ];
+                  const RICH_BAR_COLORS = [
+                    "bg-red-600", "bg-amber-500",
+                    theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
+                    "bg-purple-600", "bg-pink-600", "bg-cyan-600",
+                  ];
+                  const neutralPill = `${t.inputBg} ${t.textMuted} hover:opacity-80`;
+                  const neutralBar = theme === "dark" ? "bg-zinc-600" : "bg-slate-300";
+                  let colorSlot = 0; // only advances past non-Draw outcomes, so colors stay distinct
+                  const pillColorFor = (name: string) => {
+                    if (name.toLowerCase() === "draw") return neutralPill;
+                    if (isBinary) return colorSlot++ === 0 ? PILL_COLORS[0] : PILL_COLORS[1];
+                    return RICH_PILL_COLORS[colorSlot++ % RICH_PILL_COLORS.length];
+                  };
+                  let barColorSlot = 0;
+                  const barColorFor = (name: string) => {
+                    if (name.toLowerCase() === "draw") return neutralBar;
+                    if (isBinary) return barColorSlot++ === 0 ? BAR_COLORS[0] : BAR_COLORS[1];
+                    return RICH_BAR_COLORS[barColorSlot++ % RICH_BAR_COLORS.length];
+                  };
                   const PILL_COLORS = [
                     "bg-red-500 hover:bg-red-400 text-white",
                     `${theme === "dark" ? "bg-[#00E676]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
@@ -902,10 +940,10 @@ const price = selectedFootballMarket
                             the buttons below, each segment's width is that
                             outcome's real, live price */}
                         <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-                          {outcomeEntries.map(([name, price], i) => (
+                          {outcomeEntries.map(([name, price]) => (
                             <div
                               key={name}
-                              className={`h-full transition-all duration-500 ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                              className={`h-full transition-all duration-500 ${barColorFor(name)}`}
                               style={{ width: `${price}%` }}
                             />
                           ))}
@@ -917,11 +955,11 @@ const price = selectedFootballMarket
                       </div>
 
                       <div className="flex gap-2 mb-2">
-                        {outcomeEntries.map(([name], i) => (
+                        {outcomeEntries.map(([name]) => (
                           <button
                             key={name}
                             onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                            className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${PILL_COLORS[i % PILL_COLORS.length]}`}
+                            className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
                           >
                             {name}
                           </button>

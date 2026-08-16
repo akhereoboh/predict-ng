@@ -186,6 +186,7 @@ export default function AdminPage() {
   const [multiCreateError, setMultiCreateError] = useState<string | null>(null);
   const [multiCreateResult, setMultiCreateResult] = useState<CreateResult | null>(null);
   const [totalBudget, setTotalBudget] = useState(100000);
+  const [league, setLeague] = useState("");
   const [maxConcurrent, setMaxConcurrent] = useState(10);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -271,6 +272,7 @@ export default function AdminPage() {
             close_at: new Date(entry.closeAt).toISOString(),
             total_budget_naira: totalBudget,
             max_concurrent: maxConcurrent,
+            league: league.trim() || null,
           }),
         });
         const data = await res.json();
@@ -338,6 +340,7 @@ export default function AdminPage() {
           close_at: new Date(multiCloseAt).toISOString(),
           total_budget_naira: totalBudget,
           max_concurrent: maxConcurrent,
+          league: league.trim() || null,
         }),
       });
       const data = await res.json();
@@ -514,6 +517,18 @@ export default function AdminPage() {
             </button>
           </div>
 
+          <label className={`text-xs ${t.textMuted} block mb-1`}>League (optional — e.g. LALIGA, ATP, ERE)</label>
+          <input
+            type="text"
+            placeholder="Leave blank if this market isn't part of a league"
+            value={league}
+            onChange={(e) => setLeague(e.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            className={`w-full px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
+          />
+
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className={`text-xs ${t.textMuted} block mb-1`}>Category</label>
@@ -672,6 +687,9 @@ export default function AdminPage() {
                       placeholder={`Outcome ${i + 1} (e.g. Barcelona)`}
                       value={name}
                       onChange={(e) => updateOutcomeName(i, e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                       className={`flex-1 px-3 py-2 rounded-lg text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
                     />
                     {outcomeNames.length > 2 && (

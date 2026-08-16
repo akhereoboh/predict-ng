@@ -263,6 +263,7 @@ export default function MarketPage() {
     winner: string | null;
     price_yes: number;
     price_no: number;
+    prices?: Record<string, number>;  // present for multi-outcome markets instead of price_yes/price_no
     market_type: string;
     close_at: string | null;
   };
@@ -278,8 +279,23 @@ export default function MarketPage() {
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);          // binary markets: one line
+  const multiSeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map()); // multi-outcome: one line per outcome
   const [chartReady, setChartReady] = useState(false);
+
+  // Same hash-based color system used on the homepage cards, so a team's
+  // line color here matches its color on the card you clicked in from.
+  const MUTED_COLORS = ["#C2410C", "#991B1B", "#1E40AF", "#047857", "#6B21A8", "#9F1239", "#155E75", "#B45309", "#115E59", "#3730A3", "#3F6212", "#A21CAF"];
+  const hashIndex = (str: string, mod: number) => {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    return h % mod;
+  };
+  const colorForOutcome = (name: string, index: number, startName: string) => {
+    if (name.toLowerCase() === "draw") return theme === "dark" ? "#71717A" : "#94A3B8";
+    const startIdx = hashIndex(startName, MUTED_COLORS.length);
+    return MUTED_COLORS[(startIdx + index) % MUTED_COLORS.length];
+  };
 
   // Create the chart once, only when this is actually a real market.
   useEffect(() => {
@@ -313,6 +329,7 @@ export default function MarketPage() {
     });
     chartApiRef.current = chart;
     seriesRef.current = series;
+    const multiSeriesMap = multiSeriesRef.current;
     setChartReady(true);
 
     const handleResize = () => {
@@ -324,23 +341,76 @@ export default function MarketPage() {
       chart.remove();
       chartApiRef.current = null;
       seriesRef.current = null;
+      multiSeriesMap.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRealMarket]);
+
+  // Multi-outcome markets: once we know the real outcome names (from the
+  // first poll), create one line series per outcome, each colored to
+  // match its card color, with a title label on the line itself --
+  // that's the actual "Legacy 99.9%" style label from the reference,
+  // built into the charting library, not a custom overlay.
+  useEffect(() => {
+    if (!chartReady || !chartApiRef.current || !realMarket?.prices) return;
+    if (multiSeriesRef.current.size > 0) return; // already created
+    const names = Object.keys(realMarket.prices);
+    names.forEach((name, i) => {
+      const color = colorForOutcome(name, i, names[0]);
+      const s = chartApiRef.current!.addSeries(LineSeries, {
+        color,
+        lineWidth: 2,
+        priceLineVisible: true,
+        priceLineColor: color,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+        title: name,
+      });
+      multiSeriesRef.current.set(name, s);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartReady, realMarket?.prices]);
 
   // Load the market's real trade history into the chart once it's ready --
   // this is the "graphs and all that thing" showing how the odds actually
   // moved as real people traded, using GET /markets/{id}/chart.
   useEffect(() => {
-    if (!isRealMarket || !chartReady || !seriesRef.current) return;
+    if (!isRealMarket || !chartReady) return;
     (async () => {
       try {
         const res = await fetch(`https://sireai.uk/pm-api/markets/${id}/chart`, { cache: "no-store" });
         if (!res.ok) return;
-        const rows: { created_at: string; price_yes_after: number }[] = await res.json();
+        const rows: { created_at: string; price_yes_after?: number; outcome_prices_after?: Record<string, number> }[] = await res.json();
         setChartTradeCount(rows.length);
+
+        if (rows.length > 0 && rows[0].outcome_prices_after) {
+          // multi-outcome: wait for the per-outcome series to exist (the
+          // effect above creates them once realMarket.prices is known)
+          if (multiSeriesRef.current.size === 0) return;
+          const pointsByOutcome = new Map<string, { time: UTCTimestamp; value: number }[]>();
+          for (const r of rows) {
+            if (!r.outcome_prices_after) continue;
+            const t2 = Math.floor(new Date(r.created_at).getTime() / 1000) as UTCTimestamp;
+            for (const [name, price] of Object.entries(r.outcome_prices_after)) {
+              const arr = pointsByOutcome.get(name) ?? [];
+              if (arr.length && arr[arr.length - 1].time === t2) {
+                arr[arr.length - 1] = { time: t2, value: price };
+              } else {
+                arr.push({ time: t2, value: price });
+              }
+              pointsByOutcome.set(name, arr);
+            }
+          }
+          for (const [name, points] of pointsByOutcome) {
+            if (points.length > 0) multiSeriesRef.current.get(name)?.setData(points);
+          }
+          return;
+        }
+
+        if (!seriesRef.current) return;
         const points: { time: UTCTimestamp; value: number }[] = [];
         for (const r of rows) {
+          if (r.price_yes_after == null) continue;
           const t2 = Math.floor(new Date(r.created_at).getTime() / 1000) as UTCTimestamp;
           // lightweight-charts requires strictly increasing time -- if two
           // trades landed in the same second, keep the later one's price.
@@ -355,7 +425,7 @@ export default function MarketPage() {
         // chart just stays empty on a failed fetch -- not critical
       }
     })();
-  }, [isRealMarket, chartReady, id]);
+  }, [isRealMarket, chartReady, id, realMarket?.prices]);
 
   // Poll the live market state and keep the chart's latest point current.
   useEffect(() => {
@@ -369,7 +439,14 @@ export default function MarketPage() {
         if (cancelled) return;
         setRealMarket(data);
         setRealIsClosed(data.status !== "OPEN" || (!!data.close_at && new Date(data.close_at).getTime() <= Date.now()));
-        seriesRef.current?.update({ time: Math.floor(Date.now() / 1000) as UTCTimestamp, value: data.price_yes });
+        const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
+        if (data.prices) {
+          for (const [name, price] of Object.entries(data.prices)) {
+            multiSeriesRef.current.get(name)?.update({ time: now, value: price });
+          }
+        } else {
+          seriesRef.current?.update({ time: now, value: data.price_yes });
+        }
       } catch {
         // keep showing the last known state on a blip
       }

@@ -200,14 +200,6 @@ export default function Home() {
     trader_count: number | null;
   } | null>(null);
   const router = useRouter();
-
-  // The right-side trade panel only exists on desktop (hidden md:flex --
-  // there's no room for it on a phone screen). Without this check, tapping
-  // "Buy YES/NO" on mobile was updating panel state that literally
-  // nothing on screen displays -- the tap visibly did nothing. On mobile,
-  // the same tap instead sends you to the market's own page, which has a
-  // real, working, mobile-native fixed bottom trade bar.
-  const isMobileViewport = () => typeof window !== "undefined" && window.innerWidth < 768;
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
   const cardEls = useRef<HTMLDivElement[]>([]);
@@ -731,9 +723,9 @@ const price = selectedFootballMarket
       </nav>
 
       {/* BODY */}
-      <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 pb-20">
+      <div className="max-w-5xl mx-auto px-3 md:px-6 py-5 pb-20">
         {/* LEFT */}
-        <div className="flex flex-col gap-3 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full items-start">
           {(activeFilter === "All" || activeFilter === "CRYPTO") && (() => {
             const yes = btcLive?.price_yes ?? 50;
             const no = btcLive?.price_no ?? 50;
@@ -853,6 +845,18 @@ const price = selectedFootballMarket
                     setMultiTradeStatus({ loading: false, error: null, success: null });
                     setMultiSheetOpen(true);
                   };
+                  const outcomeEntries = Object.entries(m.outcomes);
+                  // Position-based color palette (no real team-brand colors to
+                  // draw on) -- the leading two outcomes get strong, distinct
+                  // fills; a third ("Draw", typically) gets a neutral one;
+                  // anything beyond that cycles through the rest.
+                  const PILL_COLORS = [
+                    "bg-red-500 hover:bg-red-400 text-white",
+                    "bg-teal-600 hover:bg-teal-500 text-white",
+                    `${t.inputBg} ${t.textMuted} hover:opacity-80`,
+                    "bg-amber-600 hover:bg-amber-500 text-white",
+                    "bg-purple-600 hover:bg-purple-500 text-white",
+                  ];
                   return (
                     <div
                       key={m.id}
@@ -865,15 +869,24 @@ const price = selectedFootballMarket
                           {m.market_type}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-1.5 mb-2">
-                        {Object.entries(m.outcomes).map(([name, price]) => (
+
+                      <div className="flex flex-col gap-1 mb-3">
+                        {outcomeEntries.map(([name, price]) => (
+                          <div key={name} className="flex items-center justify-between text-sm">
+                            <span className={`font-medium ${t.textPrimary}`}>{name}</span>
+                            <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 mb-2">
+                        {outcomeEntries.map(([name], i) => (
                           <button
                             key={name}
                             onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium border ${t.border} ${t.textPrimary} bg-transparent cursor-pointer hover:border-blue-400 transition-colors`}
+                            className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${PILL_COLORS[i % PILL_COLORS.length]}`}
                           >
-                            <span>{name}</span>
-                            <RollingNumber text={`${price.toFixed(0)}e`} color="#3B82F6" className="font-semibold" />
+                            {name}
                           </button>
                         ))}
                       </div>
@@ -884,22 +897,6 @@ const price = selectedFootballMarket
 
                 const isSelected = selectedFootballMarket?.id === m.id;
                 const selectFootball = (pickSide: "YES" | "NO") => {
-                  // On the All page specifically, desktop uses the
-                  // persistent side panel (better for browsing many
-                  // markets across every category at once) -- every other
-                  // case (any specific category, or any screen on mobile)
-                  // uses the sheet.
-                  if (activeFilter === "All" && !isMobileViewport()) {
-                    setPanelVisible(false);
-                    requestAnimationFrame(() => {
-                      setSelectedFootballMarket(m);
-                      setSide(pickSide);
-                      setAmount(10);
-                      setPanelKey((k) => k + 1);
-                      setPanelVisible(true);
-                    });
-                    return;
-                  }
                   setSelectedFootballMarket(m);
                   setSide(pickSide);
                   setAmount(0);
@@ -1024,7 +1021,7 @@ const price = selectedFootballMarket
                       <span className={`text-xs font-medium ${t.textSecondary} w-36 shrink-0`}>{opt.name}</span>
                       <div className="flex gap-2 ml-auto">
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); }}
                           onMouseEnter={() => setHoverSide("YES")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -1036,7 +1033,7 @@ const price = selectedFootballMarket
                           Yes {(opt.yesPrice * 100).toFixed(0)}e
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); }}
                           onMouseEnter={() => setHoverSide("NO")}
                           onMouseLeave={() => setHoverSide(null)}
                           className={`text-xs px-3 py-1 rounded-lg border font-medium cursor-pointer transition-colors ${
@@ -1070,7 +1067,7 @@ const price = selectedFootballMarket
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("YES"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedFootballMarket(null); setSelectedMarket(market); setSide("YES"); setAmount(0); setMobileSheetOpen(true); }}
                       onMouseEnter={() => setHoverSide("YES")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -1082,7 +1079,7 @@ const price = selectedFootballMarket
                       Buy YES · {Math.round(market.yesPrice * 100)}e
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (isMobileViewport()) { setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); return; } setSelectedMarket(market); setSide("NO"); setPanelKey(k => k + 1); }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedFootballMarket(null); setSelectedMarket(market); setSide("NO"); setAmount(0); setMobileSheetOpen(true); }}
                       onMouseEnter={() => setHoverSide("NO")}
                       onMouseLeave={() => setHoverSide(null)}
                       className={`flex-1 text-xs py-1.5 rounded-lg border cursor-pointer font-medium transition-colors ${
@@ -1100,8 +1097,13 @@ const price = selectedFootballMarket
           ))}
         </div>
 
-        {/* RIGHT — TRADE PANEL */}
-        <div className={`${mobileSheetOpen ? "hidden" : "hidden md:flex"} flex-col gap-4 sticky top-32 self-start`}>
+        {/* RIGHT — TRADE PANEL (retired: the sheet below is now the
+            universal buy interface on every screen size, matching how
+            Polymarket actually does it. This block is kept, not deleted,
+            since ripping out ~600 lines of interdependent JSX in one pass
+            is real risk for no functional gain -- "hidden" here makes it
+            permanently inert instead. */}
+        <div className="hidden">
           <div key={panelKey} className={`pop-in ${t.cardBg} rounded-xl p-4 shadow-sm transition-all duration-200 border ${
               theme === "dark"
                 ? activeSide === "YES" ? "border-green-500/60" : activeSide === "NO" ? "border-red-500/60" : t.border
@@ -1363,7 +1365,7 @@ const price = selectedFootballMarket
         return (
           <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSheetOpen(false)} />
-            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-6 md:w-full md:max-w-sm ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-6 px-4 pt-3 shadow-2xl`}>
+            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-8 md:w-full md:max-w-md ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-8 px-6 pt-4 shadow-2xl`}>
               <div className={`w-10 h-1 rounded-full mx-auto mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
 
               <div className="flex items-center justify-between mb-4">
@@ -1379,13 +1381,13 @@ const price = selectedFootballMarket
               <p className={`text-sm font-semibold mb-4 ${side === "YES" ? "text-green-500" : "text-red-500"}`}>{side}</p>
 
               <div className="flex items-center justify-center mb-4">
-                <span className={`text-4xl font-bold ${t.textMuted}`}>₦</span>
+                <span className={`text-5xl font-bold ${t.textMuted}`}>₦</span>
                 <input
                   type="number"
                   value={amount || ""}
                   onChange={(e) => setAmount(Number(e.target.value))}
                   placeholder="0"
-                  className={`text-4xl font-bold bg-transparent outline-none text-center w-40 ${t.textPrimary}`}
+                  className={`text-5xl font-bold bg-transparent outline-none text-center w-48 ${t.textPrimary}`}
                   autoFocus
                 />
               </div>
@@ -1439,7 +1441,7 @@ const price = selectedFootballMarket
                   // same placeholder behavior the desktop panel already has
                 }}
                 disabled={(selectedFootballMarket ? footballTradeStatus.loading : false) || amount <= 0}
-                className="w-full py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+                className="w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
               >
                 {!isLoggedIn ? "Sign in to trade" : selectedFootballMarket && footballTradeStatus.loading ? "…" : "Trade"}
               </button>
@@ -1462,7 +1464,7 @@ const price = selectedFootballMarket
         return (
           <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/60" onClick={() => setMultiSheetOpen(false)} />
-            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-6 md:w-full md:max-w-sm ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-6 px-4 pt-3 shadow-2xl`}>
+            <div className={`absolute bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-8 md:w-full md:max-w-md ${t.cardBg} rounded-t-2xl md:rounded-2xl pb-8 px-6 pt-4 shadow-2xl`}>
               <div className={`w-10 h-1 rounded-full mx-auto mb-3 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
 
               <div className="flex items-center justify-between mb-4">
@@ -1494,13 +1496,13 @@ const price = selectedFootballMarket
               </div>
 
               <div className="flex items-center justify-center mb-4">
-                <span className={`text-4xl font-bold ${t.textMuted}`}>₦</span>
+                <span className={`text-5xl font-bold ${t.textMuted}`}>₦</span>
                 <input
                   type="number"
                   value={multiAmount || ""}
                   onChange={(e) => setMultiAmount(Number(e.target.value))}
                   placeholder="0"
-                  className={`text-4xl font-bold bg-transparent outline-none text-center w-40 ${t.textPrimary}`}
+                  className={`text-5xl font-bold bg-transparent outline-none text-center w-48 ${t.textPrimary}`}
                   autoFocus
                 />
               </div>
@@ -1530,7 +1532,7 @@ const price = selectedFootballMarket
               <button
                 onClick={handleMultiOutcomeBuy}
                 disabled={multiTradeStatus.loading || multiAmount <= 0}
-                className="w-full py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+                className="w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
               >
                 {!isLoggedIn ? "Sign in to trade" : multiTradeStatus.loading ? "…" : `Trade ${selectedMultiOutcome}`}
               </button>

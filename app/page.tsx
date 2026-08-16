@@ -661,13 +661,16 @@ const price = selectedFootballMarket
 
           {activeFilter === "SPORTS" ? (
             /* Matching the reference exactly: outcome names stacked on the
-               left, larger buy buttons in a row on the right -- no
-               probability bar or price row underneath, just this one
-               block, same as Polymarket's own sports cards. We don't have
-               team logos or W-D-L records to show on the left the way
-               Polymarket does, so it's just the names. */
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <div className="flex flex-col gap-3 shrink-0">
+               left, buy buttons in a row on the right -- no probability
+               bar or price row underneath, just this one block, same as
+               Polymarket's own sports cards. Button size scales with
+               outcome count, same as the reference: bigger for a 2-way
+               match, smaller for a 3-way (team/Draw/team) match, since 3
+               need to fit the same row. We don't have team logos or W-D-L
+               records to show on the left the way Polymarket does, so
+               it's just the names. */
+            <div className="flex items-center justify-between gap-3 py-2 mb-2">
+              <div className="flex flex-col gap-4 shrink-0">
                 {outcomeEntries.map(([name]) => (
                   <span key={name} className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
                 ))}
@@ -677,7 +680,9 @@ const price = selectedFootballMarket
                   <button
                     key={name}
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                    className={`px-5 py-3 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${pillColorFor(name)}`}
+                    className={`rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
+                      outcomeEntries.length <= 2 ? "px-8 py-5 text-base" : "px-4 py-4 text-sm"
+                    } ${pillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
                   </button>

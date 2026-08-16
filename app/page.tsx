@@ -622,71 +622,48 @@ const price = selectedFootballMarket
       // outcome literally named "Draw" always stays neutral
       // gray regardless of position, since that's the one
       // outcome that should never look like a "pick."
-      const isBinary = outcomeEntries.length === 2;
-      // Sports-specific palette: muted, varied tones (burnt orange, maroon,
-      // navy, forest green) matching Polymarket's own look, instead of a
-      // fixed bright red/green pair repeated on every single match. Colors
-      // are picked deterministically from each match's own outcome names
-      // (not randomly re-rolled on every render), so the same match always
-      // looks the same, but different matches naturally get different
-      // color combinations since their team names differ. "Draw" always
-      // stays neutral gray regardless of position.
-      const MUTED_SPORTS_COLORS = [
-        "bg-orange-700 hover:bg-orange-600 text-white",
-        "bg-red-800 hover:bg-red-700 text-white",
-        "bg-blue-800 hover:bg-blue-700 text-white",
-        "bg-emerald-700 hover:bg-emerald-600 text-white",
-        "bg-purple-800 hover:bg-purple-700 text-white",
-        "bg-rose-800 hover:bg-rose-700 text-white",
+      // One unified, dynamic color system used everywhere -- Sports, All,
+      // any other category. Each outcome's color is picked deterministically
+      // by hashing its own name, so "Barcelona" always gets the same color
+      // on every card it appears on, but different team/outcome names
+      // naturally land on different colors since their hashes differ --
+      // no manual per-team color setup needed, and it scales to as many
+      // different teams as you have, not a fixed small set. "Draw" always
+      // stays neutral gray regardless of position. Muted, varied tones
+      // matching Polymarket's own look, not a fixed bright pair.
+      const MUTED_COLORS = [
+        { pill: "bg-orange-700 hover:bg-orange-600 text-white", bar: "bg-orange-700" },
+        { pill: "bg-red-800 hover:bg-red-700 text-white", bar: "bg-red-800" },
+        { pill: "bg-blue-800 hover:bg-blue-700 text-white", bar: "bg-blue-800" },
+        { pill: "bg-emerald-700 hover:bg-emerald-600 text-white", bar: "bg-emerald-700" },
+        { pill: "bg-purple-800 hover:bg-purple-700 text-white", bar: "bg-purple-800" },
+        { pill: "bg-rose-800 hover:bg-rose-700 text-white", bar: "bg-rose-800" },
+        { pill: "bg-cyan-800 hover:bg-cyan-700 text-white", bar: "bg-cyan-800" },
+        { pill: "bg-amber-700 hover:bg-amber-600 text-white", bar: "bg-amber-700" },
+        { pill: "bg-teal-800 hover:bg-teal-700 text-white", bar: "bg-teal-800" },
+        { pill: "bg-indigo-800 hover:bg-indigo-700 text-white", bar: "bg-indigo-800" },
+        { pill: "bg-lime-800 hover:bg-lime-700 text-white", bar: "bg-lime-800" },
+        { pill: "bg-fuchsia-800 hover:bg-fuchsia-700 text-white", bar: "bg-fuchsia-800" },
       ];
       const hashIndex = (str: string, mod: number) => {
         let h = 0;
         for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
         return h % mod;
       };
-      const sportsStartIdx = hashIndex(outcomeEntries[0][0], MUTED_SPORTS_COLORS.length);
-      let sportsColorSlot = 0;
-      const sportsPillColorFor = (name: string) => {
-        if (name.toLowerCase() === "draw") return `${t.inputBg} ${t.textMuted} hover:opacity-80`;
-        return MUTED_SPORTS_COLORS[(sportsStartIdx + sportsColorSlot++) % MUTED_SPORTS_COLORS.length];
-      };
-      const RICH_PILL_COLORS = [
-        "bg-red-600 hover:bg-red-500 text-white",
-        "bg-amber-500 hover:bg-amber-400 text-black",
-        `${theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white"} hover:opacity-90`,
-        "bg-purple-600 hover:bg-purple-500 text-white",
-        "bg-pink-600 hover:bg-pink-500 text-white",
-        "bg-cyan-600 hover:bg-cyan-500 text-white",
-      ];
-      const RICH_BAR_COLORS = [
-        "bg-red-600", "bg-amber-500",
-        theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
-        "bg-purple-600", "bg-pink-600", "bg-cyan-600",
-      ];
+      const startIdx = hashIndex(outcomeEntries[0][0], MUTED_COLORS.length);
       const neutralPill = `${t.inputBg} ${t.textMuted} hover:opacity-80`;
       const neutralBar = theme === "dark" ? "bg-zinc-600" : "bg-slate-300";
-      let colorSlot = 0; // only advances past non-Draw outcomes, so colors stay distinct
+      let colorSlot = 0; // only advances past non-Draw outcomes, so colors within one card stay distinct
       const pillColorFor = (name: string) => {
         if (name.toLowerCase() === "draw") return neutralPill;
-        if (isBinary) return colorSlot++ === 0 ? PILL_COLORS[0] : PILL_COLORS[1];
-        return RICH_PILL_COLORS[colorSlot++ % RICH_PILL_COLORS.length];
+        return MUTED_COLORS[(startIdx + colorSlot++) % MUTED_COLORS.length].pill;
       };
       let barColorSlot = 0;
       const barColorFor = (name: string) => {
         if (name.toLowerCase() === "draw") return neutralBar;
-        if (isBinary) return barColorSlot++ === 0 ? BAR_COLORS[0] : BAR_COLORS[1];
-        return RICH_BAR_COLORS[barColorSlot++ % RICH_BAR_COLORS.length];
+        return MUTED_COLORS[(startIdx + barColorSlot++) % MUTED_COLORS.length].bar;
       };
-      const PILL_COLORS = [
-        "bg-red-500 hover:bg-red-400 text-white",
-        `${theme === "dark" ? "bg-[#00E676]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
-        `${t.inputBg} ${t.textMuted} hover:opacity-80`,
-      ];
-      const BAR_COLORS = [
-        "bg-red-500",
-        theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
-        theme === "dark" ? "bg-zinc-600" : "bg-slate-300",
-      ];
+      const sportsPillColorFor = pillColorFor; // same system, used in the Sports branch below
       return (
         <div
           key={m.id}
@@ -712,7 +689,7 @@ const price = selectedFootballMarket
                need to fit the same row. We don't have team logos or W-D-L
                records to show on the left the way Polymarket does, so
                it's just the names. */
-            <div className="flex items-center justify-between gap-3 pt-4 pb-2 mb-2">
+            <div className="flex items-center justify-between gap-3 pt-6 pb-2 mb-2">
               <div className="flex flex-col gap-4 shrink-0">
                 {outcomeEntries.map(([name]) => (
                   <div key={name} className="flex items-center gap-2">
@@ -730,7 +707,7 @@ const price = selectedFootballMarket
                     key={name}
                     onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
                     className={`rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${
-                      outcomeEntries.length <= 2 ? "px-5 py-5 text-base" : "px-3 py-4 text-sm"
+                      outcomeEntries.length <= 2 ? "px-4 py-3 text-sm" : "px-2.5 py-2.5 text-xs"
                     } ${sportsPillColorFor(name)}`}
                   >
                     {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e

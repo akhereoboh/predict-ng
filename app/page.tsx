@@ -768,7 +768,7 @@ const price = selectedFootballMarket
                         <circle cx="18" cy="18" r={r} fill="none" stroke={theme === "dark" ? "#2A2A2A" : "#E2E8F0"} strokeWidth="3" />
                         <circle
                           cx="18" cy="18" r={r} fill="none"
-                          stroke={theme === "dark" ? "#10B981" : "#2563EB"}
+                          stroke={theme === "dark" ? "#00E676" : "#2563EB"}
                           strokeWidth="3" strokeLinecap="round"
                           strokeDasharray={circumference}
                           strokeDashoffset={offset}
@@ -792,7 +792,7 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#10B981" : "#2563EB"} className="text-base font-bold" />
+                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
@@ -801,9 +801,9 @@ const price = selectedFootballMarket
                     </div>
                   </div>
                   <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
-                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#10B981]" : t.accent}`} style={{ width: `${yes}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${yes}%` }} />
                     <div
-                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#10B981] shadow-[0_0_8px_2px_rgba(16,185,129,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
                       style={{ left: `${yes}%`, transform: "translate(-50%, -50%)" }}
                     />
                   </div>
@@ -812,7 +812,7 @@ const price = selectedFootballMarket
                 <div className="flex gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#10B981] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
                   >
                     Buy Up · {Math.round(yes)}e
                   </button>
@@ -845,18 +845,18 @@ const price = selectedFootballMarket
                   // Uses the app's OWN established colors, not arbitrary
                   // ones: red for the first outcome (matches the "NO" red
                   // used everywhere else), then our real accent color for
-                  // the second (true neon green #10B981 in dark mode, blue in
+                  // the second (true neon green #00E676 in dark mode, blue in
                   // light mode -- same accent that highlights the active
                   // nav pill), then a neutral gray for a third ("Draw",
                   // typically) and beyond.
                   const PILL_COLORS = [
                     "bg-red-500 hover:bg-red-400 text-white",
-                    `${theme === "dark" ? "bg-[#10B981]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
+                    `${theme === "dark" ? "bg-[#00E676]" : "bg-blue-600"} hover:opacity-90 ${theme === "dark" ? "text-black" : "text-white"}`,
                     `${t.inputBg} ${t.textMuted} hover:opacity-80`,
                   ];
                   const BAR_COLORS = [
                     "bg-red-500",
-                    theme === "dark" ? "bg-[#10B981]" : "bg-blue-600",
+                    theme === "dark" ? "bg-[#00E676]" : "bg-blue-600",
                     theme === "dark" ? "bg-zinc-600" : "bg-slate-300",
                   ];
                   return (
@@ -891,7 +891,7 @@ const price = selectedFootballMarket
                             <div key={name} className="flex flex-col items-center">
                               <RollingNumber
                                 text={`${price.toFixed(0)}e`}
-                                color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#10B981" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
+                                color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
                                 className="text-base font-bold"
                               />
                               <span className={`text-xs ${t.textMuted}`}>{name}</span>
@@ -910,7 +910,7 @@ const price = selectedFootballMarket
                             />
                           ))}
                           <div
-                            className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#10B981] shadow-[0_0_8px_2px_rgba(16,185,129,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                            className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
                             style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
                           />
                         </div>
@@ -958,7 +958,7 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#10B981" : "#2563EB"} className="text-base font-bold" />
+                          <RollingNumber text={`${(m.price_yes ?? 0).toFixed(0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
@@ -967,10 +967,10 @@ const price = selectedFootballMarket
                         </div>
                       </div>
                       <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#10B981]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
+                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
                         {/* floating glow marker at the boundary between YES and NO */}
                         <div
-                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#10B981] shadow-[0_0_8px_2px_rgba(16,185,129,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
                           style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
                         />
                       </div>
@@ -981,7 +981,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                         onMouseEnter={() => setHoverSide("YES")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#10B981] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
                       >
                         Buy YES · {(m.price_yes ?? 0).toFixed(0)}e
                       </button>
@@ -1220,7 +1220,7 @@ const price = selectedFootballMarket
                   text={`${payout.toFixed(2)}e`}
                   color={
                     theme === "dark"
-                      ? activeSide === "YES" ? "#10B981" : activeSide === "NO" ? "#FF3131" : "#10B981"
+                      ? activeSide === "YES" ? "#00E676" : activeSide === "NO" ? "#FF3131" : "#00E676"
                       : "#2563EB"
                   }
                 />
@@ -1243,10 +1243,10 @@ const price = selectedFootballMarket
               className={`w-full py-2.5 rounded-lg text-sm font-medium border-none cursor-pointer transition-colors disabled:opacity-50 ${
                 theme === "dark"
                   ? activeSide === "YES"
-                    ? "bg-[#10B981] hover:opacity-90 text-black"
+                    ? "bg-[#00E676] hover:opacity-90 text-black"
                     : activeSide === "NO"
                     ? "bg-red-500 hover:bg-red-400 text-white"
-                    : side === "YES" ? "bg-[#10B981] text-black" : "bg-[#FF3131] text-white"
+                    : side === "YES" ? "bg-[#00E676] text-black" : "bg-[#FF3131] text-white"
                   : side === "YES" ? `${t.accent} ${t.accentHover} text-white` : "bg-[#6B0D0D] text-white"
               }`}>
               {!isLoggedIn
@@ -1412,7 +1412,7 @@ const price = selectedFootballMarket
               </div>
 
               <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{questionText}</p>
-              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? (theme === "dark" ? "text-[#10B981]" : "text-blue-600") : "text-[#FF3131]"}`}>{side}</p>
+              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? (theme === "dark" ? "text-[#00E676]" : "text-blue-600") : "text-[#FF3131]"}`}>{side}</p>
 
               <div className="flex items-center justify-center mb-4">
                 <span className={`text-5xl font-bold ${t.textMuted}`}>₦</span>
@@ -1430,7 +1430,7 @@ const price = selectedFootballMarket
                 <button
                   onClick={() => setSide("YES")}
                   className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                    side === "YES" ? (theme === "dark" ? "bg-[#10B981] text-black" : "bg-blue-600 text-white") : `${t.inputBg} ${t.textMuted}`
+                    side === "YES" ? (theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white") : `${t.inputBg} ${t.textMuted}`
                   }`}
                 >
                   Yes
@@ -1448,7 +1448,7 @@ const price = selectedFootballMarket
               {amount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${payout.toFixed(2)}`} color={theme === "dark" ? "#10B981" : "#2563EB"} className="font-bold text-sm" />
+                  <RollingNumber text={`₦${payout.toFixed(2)}`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="font-bold text-sm" />
                 </p>
               )}
 
@@ -1544,7 +1544,7 @@ const price = selectedFootballMarket
               {multiAmount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color={theme === "dark" ? "#10B981" : "#2563EB"} className="font-bold text-sm" />
+                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="font-bold text-sm" />
                 </p>
               )}
 

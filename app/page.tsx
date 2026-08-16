@@ -657,79 +657,105 @@ const price = selectedFootballMarket
             </span>
           </div>
 
-          {activeFilter !== "SPORTS" && (
-            /* name + % rows -- the first thing under the title, same info
-               as the price/bar section below, just laid out to read at a
-               glance before you even look at the bar. Skipped in the
-               Sports section, where the buttons themselves already carry
-               name + price and this would be redundant. */
-            <div className="flex flex-col gap-0.5 mb-3">
-              {outcomeEntries.map(([name, price]) => (
-                <div key={name} className="flex items-center justify-between text-sm">
-                  <span className={`font-medium ${t.textPrimary}`}>{name}</span>
-                  <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+          {activeFilter === "SPORTS" ? (
+            <>
+              {/* horizontal split, matching the reference exactly: outcome
+                  names stacked on the left, buy buttons in a row on the
+                  right -- one combined block, not stacked sections. We
+                  don't have team logos or W-D-L records to show on the
+                  left the way Polymarket does, so it's just the names,
+                  but the left/right split and the button row itself match. */}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex flex-col gap-2 shrink-0">
+                  {outcomeEntries.map(([name]) => (
+                    <span key={name} className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="flex gap-2 flex-1 justify-end">
+                  {outcomeEntries.map(([name, price]) => (
+                    <button
+                      key={name}
+                      onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${pillColorFor(name)}`}
+                    >
+                      {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {activeFilter === "SPORTS" && (
-            <div className="flex gap-2 mb-3">
-              {outcomeEntries.map(([name]) => (
-                <button
-                  key={name}
-                  onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                  className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex gap-3">
-              {outcomeEntries.map(([name, price], i) => (
-                <div key={name} className="flex flex-col items-center">
-                  <RollingNumber
-                    text={`${price.toFixed(0)}e`}
-                    color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
-                    className="text-base font-bold"
+              {/* probability bar underneath, as its own row */}
+              <div className={`relative flex h-0.5 rounded-full overflow-visible mb-2 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                {outcomeEntries.map(([name, price]) => (
+                  <div
+                    key={name}
+                    className={`h-full transition-all duration-500 ${barColorFor(name)}`}
+                    style={{ width: `${price}%` }}
                   />
-                  <span className={`text-xs ${t.textMuted}`}>{name}</span>
-                </div>
-              ))}
-            </div>
-            {/* multi-segment probability bar -- same colors as
-                the buttons, each segment's width is that
-                outcome's real, live price */}
-            <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-              {outcomeEntries.map(([name, price]) => (
+                ))}
                 <div
-                  key={name}
-                  className={`h-full transition-all duration-500 ${barColorFor(name)}`}
-                  style={{ width: `${price}%` }}
+                  className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                  style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
                 />
-              ))}
-              <div
-                className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
-                style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
-              />
-            </div>
-          </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* name + % rows -- the first thing under the title, same info
+                 as the price/bar section below, just laid out to read at a
+                 glance before you even look at the bar. */}
+              <div className="flex flex-col gap-0.5 mb-3">
+                {outcomeEntries.map(([name, price]) => (
+                  <div key={name} className="flex items-center justify-between text-sm">
+                    <span className={`font-medium ${t.textPrimary}`}>{name}</span>
+                    <RollingNumber text={`${price.toFixed(0)}%`} color={theme === "dark" ? "#E5E7EB" : "#334155"} className="font-semibold" />
+                  </div>
+                ))}
+              </div>
 
-          {activeFilter !== "SPORTS" && (
-            <div className="flex gap-2 mb-2">
-              {outcomeEntries.map(([name]) => (
-                <button
-                  key={name}
-                  onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                  className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex gap-3">
+                  {outcomeEntries.map(([name, price], i) => (
+                    <div key={name} className="flex flex-col items-center">
+                      <RollingNumber
+                        text={`${price.toFixed(0)}e`}
+                        color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
+                        className="text-base font-bold"
+                      />
+                      <span className={`text-xs ${t.textMuted}`}>{name}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* multi-segment probability bar -- same colors as
+                    the buttons, each segment's width is that
+                    outcome's real, live price */}
+                <div className={`relative flex-1 flex h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                  {outcomeEntries.map(([name, price]) => (
+                    <div
+                      key={name}
+                      className={`h-full transition-all duration-500 ${barColorFor(name)}`}
+                      style={{ width: `${price}%` }}
+                    />
+                  ))}
+                  <div
+                    className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                    style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mb-2">
+                {outcomeEntries.map(([name]) => (
+                  <button
+                    key={name}
+                    onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                    className={`flex-1 min-w-0 truncate px-2 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${pillColorFor(name)}`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
           <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
         </div>

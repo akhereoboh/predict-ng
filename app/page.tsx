@@ -658,47 +658,30 @@ const price = selectedFootballMarket
           </div>
 
           {activeFilter === "SPORTS" ? (
-            <>
-              {/* horizontal split, matching the reference exactly: outcome
-                  names stacked on the left, buy buttons in a row on the
-                  right -- one combined block, not stacked sections. We
-                  don't have team logos or W-D-L records to show on the
-                  left the way Polymarket does, so it's just the names,
-                  but the left/right split and the button row itself match. */}
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex flex-col gap-2 shrink-0">
-                  {outcomeEntries.map(([name]) => (
-                    <span key={name} className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
-                  ))}
-                </div>
-                <div className="flex gap-2 flex-1 justify-end">
-                  {outcomeEntries.map(([name, price]) => (
-                    <button
-                      key={name}
-                      onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${pillColorFor(name)}`}
-                    >
-                      {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* probability bar underneath, as its own row */}
-              <div className={`relative flex h-0.5 rounded-full overflow-visible mb-2 ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-                {outcomeEntries.map(([name, price]) => (
-                  <div
-                    key={name}
-                    className={`h-full transition-all duration-500 ${barColorFor(name)}`}
-                    style={{ width: `${price}%` }}
-                  />
+            /* Matching the reference exactly: outcome names stacked on the
+               left, larger buy buttons in a row on the right -- no
+               probability bar or price row underneath, just this one
+               block, same as Polymarket's own sports cards. We don't have
+               team logos or W-D-L records to show on the left the way
+               Polymarket does, so it's just the names. */
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex flex-col gap-3 shrink-0">
+                {outcomeEntries.map(([name]) => (
+                  <span key={name} className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
                 ))}
-                <div
-                  className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
-                  style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
-                />
               </div>
-            </>
+              <div className="flex gap-2 flex-1 justify-end">
+                {outcomeEntries.map(([name, price]) => (
+                  <button
+                    key={name}
+                    onClick={(e) => { e.stopPropagation(); selectOutcome(name); }}
+                    className={`px-5 py-3 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors whitespace-nowrap ${pillColorFor(name)}`}
+                  >
+                    {name.slice(0, 3).toUpperCase()} {price.toFixed(0)}e
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : (
             <>
               {/* name + % rows -- the first thing under the title, same info

@@ -4,7 +4,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import RollingNumber from "./components/RollingNumber";
 import { useTheme } from "./context/theme";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 
 
 const MARKETS = [
@@ -139,7 +139,7 @@ const MARKETS = [
 // sub-categories created from the admin page show up here automatically.
 type CategoryEntry = { name: string; parent: string | null };
 
-export default function Home() {
+function HomeContent() {
   const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, logout, getValidToken, refreshPortfolio } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2075,5 +2075,13 @@ const price = selectedFootballMarket
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <HomeContent />
+    </Suspense>
   );
 }

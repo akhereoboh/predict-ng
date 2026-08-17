@@ -8,13 +8,14 @@ type Row = {
   sub?: string;
   d: string; // icon path
   action?: "toggleTheme" | "logout" | "signin";
+  route?: string;
 };
 
 const ACCOUNT: Row[] = [
   { label: "Profile", d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
-  { label: "Positions", d: "M9 17V9m4 8V5m4 12v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" },
+  { label: "Positions", d: "M9 17V9m4 8V5m4 12v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z", route: "/positions" },
   { label: "Watchlist", d: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
-  { label: "Transaction History", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { label: "Transaction History", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", route: "/history" },
   { label: "Deposit & Withdraw", d: "M12 4v16m0 0l-4-4m4 4l4-4M4 4h16" },
 ];
 
@@ -44,12 +45,14 @@ function Section({
   theme,
   t,
   toggleTheme,
+  onNavigate,
 }: {
   title: string;
   rows: Row[];
   theme: "light" | "dark";
   t: ThemeTokens;
   toggleTheme: () => void;
+  onNavigate: (route: string) => void;
 }) {
   return (
     <div className="mb-6">
@@ -58,7 +61,7 @@ function Section({
         {rows.map((row) => (
           <button
             key={row.label}
-            onClick={() => { if (row.action === "toggleTheme") toggleTheme(); }}
+            onClick={() => { if (row.action === "toggleTheme") toggleTheme(); else if (row.route) onNavigate(row.route); }}
             className={`w-full flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors ${t.cardBg} hover:${theme === "dark" ? "bg-[#161616]" : "bg-slate-50"} border-none text-left`}
           >
             <svg className={`w-5 h-5 shrink-0 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,10 +140,10 @@ export default function More() {
       <div className="max-w-2xl mx-auto px-3 md:px-6 py-5">
         <h1 className={`text-xl font-bold ${t.textPrimary} mb-5`}>More</h1>
 
-        <Section title="ACCOUNT" rows={ACCOUNT} theme={theme} t={t} toggleTheme={toggleTheme} />
-        <Section title="DISCOVERY" rows={DISCOVERY} theme={theme} t={t} toggleTheme={toggleTheme} />
-        <Section title="SETTINGS" rows={SETTINGS} theme={theme} t={t} toggleTheme={toggleTheme} />
-        <Section title="SUPPORT & LEGAL" rows={SUPPORT} theme={theme} t={t} toggleTheme={toggleTheme} />
+        <Section title="ACCOUNT" rows={ACCOUNT} theme={theme} t={t} toggleTheme={toggleTheme} onNavigate={(route) => router.push(route)} />
+        <Section title="DISCOVERY" rows={DISCOVERY} theme={theme} t={t} toggleTheme={toggleTheme} onNavigate={(route) => router.push(route)} />
+        <Section title="SETTINGS" rows={SETTINGS} theme={theme} t={t} toggleTheme={toggleTheme} onNavigate={(route) => router.push(route)} />
+        <Section title="SUPPORT & LEGAL" rows={SUPPORT} theme={theme} t={t} toggleTheme={toggleTheme} onNavigate={(route) => router.push(route)} />
 
         <div className="mb-6">
           <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-2 px-1`}>ACCOUNT ACTIONS</div>

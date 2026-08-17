@@ -882,26 +882,33 @@ const price = selectedFootballMarket
                     )}
 
                     {activeFilter === "SPORTS" && (
-                      <div className="flex items-center justify-between gap-3 pt-10 pb-2">
-                        <div className="flex flex-col gap-8 shrink-0">
-                          <span className={`text-sm font-medium ${t.textPrimary}`}>YES</span>
-                          <span className={`text-sm font-medium ${t.textPrimary}`}>NO</span>
+                      <>
+                        {/* Unlike a team-vs-team match, "YES"/"NO" alone
+                            means nothing -- the question itself is the
+                            only thing that makes the market legible, so
+                            it stays even in the compact Sports layout. */}
+                        <p className={`text-sm font-medium ${t.textPrimary} mb-2`}>{m.question}</p>
+                        <div className="flex items-center justify-between gap-3 pt-2 pb-2">
+                          <div className="flex flex-col gap-8 shrink-0">
+                            <span className={`text-sm font-medium ${t.textPrimary}`}>YES</span>
+                            <span className={`text-sm font-medium ${t.textPrimary}`}>NO</span>
+                          </div>
+                          <div className="flex gap-2 flex-1 justify-end">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
+                              className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${yesColor.pill}`}
+                            >
+                              YES {Math.floor(m.price_yes ?? 0)}e
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
+                              className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${noColor.pill}`}
+                            >
+                              NO {Math.floor(m.price_no ?? 0)}e
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-2 flex-1 justify-end">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
-                            className={`px-4 py-4 text-sm rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${yesColor.pill}`}
-                          >
-                            YES {Math.floor(m.price_yes ?? 0)}e
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
-                            className={`px-4 py-4 text-sm rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${noColor.pill}`}
-                          >
-                            NO {Math.floor(m.price_no ?? 0)}e
-                          </button>
-                        </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 );

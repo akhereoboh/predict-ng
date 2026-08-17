@@ -307,6 +307,12 @@ export default function MarketPage() {
     const startIdx = hashIndex(startName, MUTED_COLORS.length);
     return MUTED_COLORS[(startIdx + index) % MUTED_COLORS.length];
   };
+  // Same system for binary YES/NO markets, matching the homepage cards --
+  // hashed off the market's own id (not the literal "YES"/"NO" strings,
+  // which never change and would give every binary market the identical
+  // pair). Only the BTC page keeps fixed green/red.
+  const binYesColor = (marketId: string) => MUTED_COLORS[hashIndex(marketId, MUTED_COLORS.length)];
+  const binNoColor = (marketId: string) => MUTED_COLORS[(hashIndex(marketId, MUTED_COLORS.length) + 1) % MUTED_COLORS.length];
 
   // Create the chart once, only when this is actually a real market.
   useEffect(() => {
@@ -963,24 +969,22 @@ export default function MarketPage() {
                 <div className="flex gap-2 mb-2">
                   {customAmounts.map((a) => {
                     const isActive = amount === a;
-                    const multiColor = realMarket?.prices && selectedRealOutcome
+                    const dynamicColor = realMarket?.prices && selectedRealOutcome
                       ? colorForOutcome(selectedRealOutcome, Object.keys(realMarket.prices).indexOf(selectedRealOutcome), Object.keys(realMarket.prices)[0])
-                      : null;
+                      : realMarket ? (side === "YES" ? binYesColor(realMarket.id) : binNoColor(realMarket.id)) : null;
                     return (
                       <button key={a} onClick={() => setAmount(a)}
-                        style={isActive && multiColor ? { backgroundColor: multiColor } : undefined}
+                        style={isActive && dynamicColor ? { backgroundColor: dynamicColor } : undefined}
                         className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
                           isActive
-                            ? multiColor
+                            ? dynamicColor
                               ? "text-white"
-                              : theme === "dark"
-                                ? side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
-                                : `${t.amountActive} ${t.amountActiveText}`
+                              : `${t.amountActive} ${t.amountActiveText}`
                             : `${t.inputBg} ${t.textPrimary}`
                         }`}
                       >
                         <span className="text-sm font-bold">{a}e</span>
-                        <span className={`text-xs ${isActive ? (multiColor ? "text-white/80" : t.amountActiveSub) : "text-emerald-500"}`}>
+                        <span className={`text-xs ${isActive ? (dynamicColor ? "text-white/80" : t.amountActiveSub) : "text-emerald-500"}`}>
                           win {price > 0 ? (a / price).toFixed(0) : "0"}e
                         </span>
                       </button>
@@ -1002,9 +1006,15 @@ export default function MarketPage() {
                     if (realMarket?.prices) handleRealMultiBuy(); else handleRealBuy();
                   }}
                   disabled={realTradeStatus.loading}
-                  style={realMarket?.prices && selectedRealOutcome ? { backgroundColor: colorForOutcome(selectedRealOutcome, Object.keys(realMarket.prices).indexOf(selectedRealOutcome), Object.keys(realMarket.prices)[0]) } : undefined}
+                  style={
+                    realMarket?.prices && selectedRealOutcome
+                      ? { backgroundColor: colorForOutcome(selectedRealOutcome, Object.keys(realMarket.prices).indexOf(selectedRealOutcome), Object.keys(realMarket.prices)[0]) }
+                      : realMarket
+                        ? { backgroundColor: side === "YES" ? binYesColor(realMarket.id) : binNoColor(realMarket.id) }
+                        : undefined
+                  }
                   className={`w-full h-11 rounded-xl text-sm font-bold border-none cursor-pointer disabled:opacity-50 ${
-                    realMarket?.prices ? "text-white" : theme === "dark" ? (side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white") : `${t.accent} text-white`
+                    realMarket ? "text-white" : `${t.accent} text-white`
                   }`}
                 >
                   {!isLoggedIn ? "Sign in to trade" : realTradeStatus.loading ? "…" : `Confirm buy ${realMarket?.prices ? selectedRealOutcome : side}`}

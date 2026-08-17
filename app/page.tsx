@@ -795,6 +795,32 @@ const price = selectedFootballMarket
       setFootballTradeStatus({ loading: false, error: null, success: null });
       setMobileSheetOpen(true);
     };
+    // Same dynamic, muted color system as multi-outcome markets -- hashed
+    // off the market's own id (not the literal "YES"/"NO" strings, which
+    // never change and would give every binary market the identical
+    // color pair). Only the BTC card keeps the fixed green/red now.
+    const MUTED_COLORS_BIN = [
+      { pill: "bg-orange-700 hover:bg-orange-600 text-white", bar: "bg-orange-700", hex: "#C2410C" },
+      { pill: "bg-red-800 hover:bg-red-700 text-white", bar: "bg-red-800", hex: "#991B1B" },
+      { pill: "bg-blue-800 hover:bg-blue-700 text-white", bar: "bg-blue-800", hex: "#1E40AF" },
+      { pill: "bg-emerald-700 hover:bg-emerald-600 text-white", bar: "bg-emerald-700", hex: "#047857" },
+      { pill: "bg-purple-800 hover:bg-purple-700 text-white", bar: "bg-purple-800", hex: "#6B21A8" },
+      { pill: "bg-rose-800 hover:bg-rose-700 text-white", bar: "bg-rose-800", hex: "#9F1239" },
+      { pill: "bg-cyan-800 hover:bg-cyan-700 text-white", bar: "bg-cyan-800", hex: "#155E75" },
+      { pill: "bg-amber-700 hover:bg-amber-600 text-white", bar: "bg-amber-700", hex: "#B45309" },
+      { pill: "bg-teal-800 hover:bg-teal-700 text-white", bar: "bg-teal-800", hex: "#0F766E" },
+      { pill: "bg-indigo-800 hover:bg-indigo-700 text-white", bar: "bg-indigo-800", hex: "#3730A3" },
+      { pill: "bg-lime-800 hover:bg-lime-700 text-white", bar: "bg-lime-800", hex: "#4D7C0F" },
+      { pill: "bg-fuchsia-800 hover:bg-fuchsia-700 text-white", bar: "bg-fuchsia-800", hex: "#A21CAF" },
+    ];
+    const hashIdxBin = (str: string, mod: number) => {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+      return h % mod;
+    };
+    const binStartIdx = hashIdxBin(m.id, MUTED_COLORS_BIN.length);
+    const yesColor = MUTED_COLORS_BIN[binStartIdx];
+    const noColor = MUTED_COLORS_BIN[(binStartIdx + 1) % MUTED_COLORS_BIN.length];
     return (
       <div
                     key={m.id}
@@ -813,20 +839,21 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
+                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={yesColor.hex} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color="#EF4444" className="text-base font-bold" />
+                          <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color={noColor.hex} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>NO</span>
                         </div>
                       </div>
-                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-red-200"}`}>
-                        <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
+                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                        <div className={`h-full rounded-full transition-all duration-500 ${noColor.bar}`} style={{ width: "100%" }} />
+                        <div className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${yesColor.bar}`} style={{ width: `${m.price_yes ?? 50}%` }} />
                         {/* floating glow marker at the boundary between YES and NO */}
                         <div
-                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-black shadow-[0_0_8px_2px_rgba(0,0,0,0.5)]"}`}
-                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
+                          className="absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse"
+                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)", backgroundColor: yesColor.hex, boxShadow: `0 0 8px 2px ${yesColor.hex}99` }}
                         />
                       </div>
                     </div>
@@ -836,7 +863,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                         onMouseEnter={() => setHoverSide("YES")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${yesColor.pill}`}
                       >
                         Buy YES · {Math.floor(m.price_yes ?? 0)}e
                       </button>
@@ -844,7 +871,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
                         onMouseEnter={() => setHoverSide("NO")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${noColor.pill}`}
                       >
                         Buy NO · {Math.floor(m.price_no ?? 0)}e
                       </button>

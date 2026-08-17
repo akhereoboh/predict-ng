@@ -160,7 +160,7 @@ function saveSession(session: StoredSession | null) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [userId, setUserId] = useState<string | null>(null);

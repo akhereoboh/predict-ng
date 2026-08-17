@@ -831,51 +831,78 @@ const price = selectedFootballMarket
                         : `${t.border} hover:shadow-md`
                     }`}
                   >
-                    <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
-                    <p className={`text-xs ${t.textMuted} mb-3`}>
-                      ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
-                    </p>
+                    {activeFilter !== "SPORTS" && (
+                      <>
+                        <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
+                        <p className={`text-xs ${t.textMuted} mb-3`}>
+                          ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+                        </p>
 
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={yesColor.hex} className="text-base font-bold" />
-                          <span className={`text-xs ${t.textMuted}`}>YES</span>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                              <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={yesColor.hex} className="text-base font-bold" />
+                              <span className={`text-xs ${t.textMuted}`}>YES</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color={noColor.hex} className="text-base font-bold" />
+                              <span className={`text-xs ${t.textMuted}`}>NO</span>
+                            </div>
+                          </div>
+                          <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
+                            <div className={`h-full rounded-full transition-all duration-500 ${noColor.bar}`} style={{ width: "100%" }} />
+                            <div className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${yesColor.bar}`} style={{ width: `${m.price_yes ?? 50}%` }} />
+                            {/* floating glow marker at the boundary between YES and NO */}
+                            <div
+                              className="absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse"
+                              style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)", backgroundColor: yesColor.hex, boxShadow: `0 0 8px 2px ${yesColor.hex}99` }}
+                            />
+                          </div>
                         </div>
-                        <div className="flex flex-col items-center">
-                          <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color={noColor.hex} className="text-base font-bold" />
-                          <span className={`text-xs ${t.textMuted}`}>NO</span>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
+                            onMouseEnter={() => setHoverSide("YES")}
+                            onMouseLeave={() => setHoverSide(null)}
+                            className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${yesColor.pill}`}
+                          >
+                            Buy YES · {Math.floor(m.price_yes ?? 0)}e
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
+                            onMouseEnter={() => setHoverSide("NO")}
+                            onMouseLeave={() => setHoverSide(null)}
+                            className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${noColor.pill}`}
+                          >
+                            Buy NO · {Math.floor(m.price_no ?? 0)}e
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {activeFilter === "SPORTS" && (
+                      <div className="flex items-center justify-between gap-3 pt-10 pb-2">
+                        <div className="flex flex-col gap-8 shrink-0">
+                          <span className={`text-sm font-medium ${t.textPrimary}`}>YES</span>
+                          <span className={`text-sm font-medium ${t.textPrimary}`}>NO</span>
+                        </div>
+                        <div className="flex gap-2 flex-1 justify-end">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
+                            className={`px-4 py-4 text-sm rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${yesColor.pill}`}
+                          >
+                            YES {Math.floor(m.price_yes ?? 0)}e
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
+                            className={`px-4 py-4 text-sm rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${noColor.pill}`}
+                          >
+                            NO {Math.floor(m.price_no ?? 0)}e
+                          </button>
                         </div>
                       </div>
-                      <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`}>
-                        <div className={`h-full rounded-full transition-all duration-500 ${noColor.bar}`} style={{ width: "100%" }} />
-                        <div className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${yesColor.bar}`} style={{ width: `${m.price_yes ?? 50}%` }} />
-                        {/* floating glow marker at the boundary between YES and NO */}
-                        <div
-                          className="absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse"
-                          style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)", backgroundColor: yesColor.hex, boxShadow: `0 0 8px 2px ${yesColor.hex}99` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
-                        onMouseEnter={() => setHoverSide("YES")}
-                        onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${yesColor.pill}`}
-                      >
-                        Buy YES · {Math.floor(m.price_yes ?? 0)}e
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
-                        onMouseEnter={() => setHoverSide("NO")}
-                        onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${noColor.pill}`}
-                      >
-                        Buy NO · {Math.floor(m.price_no ?? 0)}e
-                      </button>
-                    </div>
+                    )}
                   </div>
                 );
   };

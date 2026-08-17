@@ -230,8 +230,14 @@ function HomeContent() {
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [bubbles, setBubbles] = useState<{ id: number; marketId: string; side: "YES" | "NO"; amount: number; x: number }[]>([]);
+  const [bubbles, setBubbles] = useState<{ id: number; marketId: string; outcome: string; amount: number; x: number }[]>([]);
+  // Real trades across every market, polled independently of the price
+  // list -- this is what tells us "someone just bought X on market Y",
+  // which is what spawns a real floating indicator instead of a fake one.
+  const lastTradeSeenRef = useRef<string | null>(null);
+  const marketLastRealTradeRef = useRef<Map<string, number>>(new Map()); // marketId -> ms timestamp of its last REAL trade seen
   const [btcLive, setBtcLive] = useState<{
+    market_id: string | null;
     price_yes: number | null;
     price_no: number | null;
     cycle_ends_at: string | null;
@@ -244,19 +250,37 @@ function HomeContent() {
 
 
 
+  // Real trades first: poll for anything new since the last thing we saw,
+  // and spawn a real floating indicator for each one, positioned on
+  // whichever visible market card it belongs to.
   useEffect(() => {
-    if (theme !== "dark") return;
-    const interval = setInterval(() => {
-      const market = MARKETS[Math.floor(Math.random() * MARKETS.length)];
-      const side = Math.random() > 0.5 ? "YES" : "NO";
-      const amount = [1, 2, 3, 5, 8, 10][Math.floor(Math.random() * 6)];
-      const x = 20 + Math.random() * 60;
-      const id = Date.now() + Math.random();
-      setBubbles((prev) => [...prev, { id, marketId: market.id, side, amount, x }]);
-      setTimeout(() => setBubbles((prev) => prev.filter((b) => b.id !== id)), 1900);
-    }, 900);
-    return () => clearInterval(interval);
-  }, [theme]);
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const url = new URL("https://sireai.uk/pm-api/markets/recent-trades");
+        if (lastTradeSeenRef.current) url.searchParams.set("since", lastTradeSeenRef.current);
+        const res = await fetch(url.toString(), { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const trades: { created_at: string; market_id: string; outcome: string; amount_naira: number }[] = await res.json();
+        if (trades.length === 0) return;
+        lastTradeSeenRef.current = trades[0].created_at; // most recent first
+        const now = Date.now();
+        for (const trade of trades) {
+          marketLastRealTradeRef.current.set(trade.market_id, now);
+          const id = now + Math.random();
+          const x = 20 + Math.random() * 60;
+          setBubbles((prev) => [...prev, { id, marketId: trade.market_id, outcome: trade.outcome, amount: Math.round(trade.amount_naira), x }]);
+          setTimeout(() => setBubbles((prev) => prev.filter((b) => b.id !== id)), 1900);
+        }
+      } catch {
+        // a missed poll just means a couple of trades don't get a bubble -- not critical
+      }
+    };
+    poll();
+    const intervalId = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(intervalId); };
+  }, []);
+
   const cardRef = (el: HTMLDivElement | null, market: typeof MARKETS[0]) => {
     if (!el) return;
     cardRefs.current.set(market.id, market);
@@ -349,6 +373,7 @@ const price = selectedFootballMarket
       try {
         const data = JSON.parse(event.data);
         setBtcLive({
+          market_id: data.market_id,
           price_yes: data.price_yes,
           price_no: data.price_no,
           cycle_ends_at: data.cycle_ends_at,
@@ -425,6 +450,30 @@ const price = selectedFootballMarket
   const [footballMarkets, setFootballMarkets] = useState<FootballMarket[]>([]);
   const [footballLoading, setFootballLoading] = useState(true);
   const [footballTradeStatus, setFootballTradeStatus] = useState<FootballTradeState>({ loading: false, error: null, success: null });
+
+  // Simulated fallback, only for markets that are actually visible right
+  // now and haven't had a real trade in a while -- keeps quiet markets
+  // feeling alive without pretending activity exists on ones you can't
+  // even see, and never fires at all once real trades are coming in.
+  useEffect(() => {
+    const QUIET_THRESHOLD_MS = 8000;
+    const interval = setInterval(() => {
+      const visible = footballMarkets.filter((m) => !m.closed);
+      if (visible.length === 0) return;
+      const market = visible[Math.floor(Math.random() * visible.length)];
+      const lastReal = marketLastRealTradeRef.current.get(market.id) ?? 0;
+      if (Date.now() - lastReal < QUIET_THRESHOLD_MS) return; // real activity is already covering this one
+      const outcome = market.outcomes
+        ? Object.keys(market.outcomes)[Math.floor(Math.random() * Object.keys(market.outcomes).length)]
+        : (Math.random() > 0.5 ? "YES" : "NO");
+      const amount = [500, 1000, 2000, 3000, 5000, 8000][Math.floor(Math.random() * 6)];
+      const x = 20 + Math.random() * 60;
+      const id = Date.now() + Math.random();
+      setBubbles((prev) => [...prev, { id, marketId: market.id, outcome, amount, x }]);
+      setTimeout(() => setBubbles((prev) => prev.filter((b) => b.id !== id)), 1900);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [footballMarkets]);
 
   // Auto-close the mobile trade sheet a moment after a successful trade --
   // long enough for the "Bought X for ₦Y" confirmation to actually be seen.
@@ -700,12 +749,32 @@ const price = selectedFootballMarket
         if (name.toLowerCase() === "draw") return theme === "dark" ? "#A1A1AA" : "#64748B";
         return MUTED_HEX[(startIdx + hexColorSlot++) % MUTED_HEX.length];
       };
+      // Stateless lookup by name, for the floating buy bubbles -- unlike
+      // hexColorFor above, this never advances a shared counter, so it's
+      // safe to call any number of times for any outcome (bubbles arrive
+      // asynchronously from real trades, not in the same fixed order as
+      // the main render loop) without throwing off the price colors.
+      const bubbleColorFor = (outcomeName: string) => {
+        if (outcomeName.toLowerCase() === "draw") return theme === "dark" ? "#A1A1AA" : "#64748B";
+        const idx = outcomeEntries.findIndex(([name]) => name === outcomeName);
+        if (idx === -1) return "#FFFFFF";
+        return MUTED_HEX[(startIdx + idx) % MUTED_HEX.length];
+      };
       return (
         <div
           key={m.id}
           onClick={() => router.push(`/market/${m.id}`)}
-          className={`${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
+          className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
         >
+          {bubbles.filter((b) => b.marketId === m.id).map((b) => (
+            <span
+              key={b.id}
+              className="float-up"
+              style={{ left: `${b.x}%`, bottom: "50%", color: bubbleColorFor(b.outcome) }}
+            >
+              {b.outcome} +₦{b.amount}
+            </span>
+          ))}
           {activeFilter !== "SPORTS" && (
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className={`text-sm font-medium ${t.textPrimary} flex-1`}>{m.question}</p>
@@ -713,6 +782,12 @@ const price = selectedFootballMarket
                 {m.market_type}
               </span>
             </div>
+          )}
+
+          {activeFilter === "SPORTS" && (
+            <p className={`text-xs ${t.textMuted}`}>
+              ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+            </p>
           )}
 
           {activeFilter === "SPORTS" ? (
@@ -725,22 +800,17 @@ const price = selectedFootballMarket
                need to fit the same row. We don't have team logos or W-D-L
                records to show on the left the way Polymarket does, so
                it's just the names. */
-            <div className="flex items-center justify-between gap-3 pt-8 pb-2 mb-2">
-              <div className="flex flex-col gap-1 shrink-0">
-                <p className={`text-xs ${t.textMuted} mb-1`}>
-                  ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
-                </p>
-                <div className="flex flex-col gap-3">
-                  {outcomeEntries.map(([name]) => (
-                    <div key={name} className="flex items-center gap-2">
-                      {logoFor(name) && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logoFor(name)} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
-                      )}
-                      <span className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
-                    </div>
-                  ))}
-                </div>
+            <div className="flex items-center justify-between gap-3 pt-4 pb-2 mb-2">
+              <div className="flex flex-col gap-3 shrink-0">
+                {outcomeEntries.map(([name]) => (
+                  <div key={name} className="flex items-center gap-2">
+                    {logoFor(name) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoFor(name)} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    )}
+                    <span className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
+                  </div>
+                ))}
               </div>
               <div className="flex gap-2 flex-1 justify-end">
                 {outcomeEntries.map(([name, price]) => (
@@ -863,6 +933,15 @@ const price = selectedFootballMarket
                         : `${t.border} hover:shadow-md`
                     }`}
                   >
+                    {bubbles.filter((b) => b.marketId === m.id).map((b) => (
+                      <span
+                        key={b.id}
+                        className="float-up"
+                        style={{ left: `${b.x}%`, bottom: "50%", color: b.outcome === "YES" ? yesColor.hex : noColor.hex }}
+                      >
+                        {b.outcome} +₦{b.amount}
+                      </span>
+                    ))}
                     {activeFilter !== "SPORTS" && (
                       <>
                         <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
@@ -1116,6 +1195,15 @@ const price = selectedFootballMarket
                 onClick={() => router.push("/btc")}
                 className={`relative overflow-hidden ${t.cardBg} rounded-xl p-4 cursor-pointer transition-all border shadow-sm ${t.border} hover:shadow-md`}
               >
+                {btcLive?.market_id && bubbles.filter((b) => b.marketId === btcLive.market_id).map((b) => (
+                  <span
+                    key={b.id}
+                    className="float-up"
+                    style={{ left: `${b.x}%`, bottom: "50%", color: b.outcome === "YES" ? "#00E676" : "#FF3131" }}
+                  >
+                    {b.outcome === "YES" ? "Up" : "Down"} +₦{b.amount}
+                  </span>
+                ))}
                 <div className="flex justify-between items-start gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
                     <span className="w-8 h-8 rounded-full bg-[#F7931A] flex items-center justify-center text-white text-sm font-bold shrink-0">₿</span>
@@ -1269,10 +1357,10 @@ const price = selectedFootballMarket
                   style={{
                     left: `${b.x}%`,
                     bottom: "60px",
-                    color: b.side === "YES" ? "#4ade80" : "#ef4444",
+                    color: b.outcome === "YES" ? "#4ade80" : "#ef4444",
                   }}
                 >
-                  {b.side} +e{b.amount}
+                  {b.outcome} +₦{b.amount}
                 </span>
               ))}
               <div className="flex justify-between items-start gap-3 mb-3">

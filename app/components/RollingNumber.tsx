@@ -8,7 +8,7 @@
 function RollingDigit({ digit, color }: { digit: string; color: string }) {
   if (!/[0-9]/.test(digit)) {
     return (
-      <span style={{ color, display: "inline-block" }}>{digit}</span>
+      <span style={{ color, display: "inline-block", whiteSpace: "pre" }}>{digit}</span>
     );
   }
   const n = parseInt(digit, 10);
@@ -43,7 +43,7 @@ function RollingDigit({ digit, color }: { digit: string; color: string }) {
 export default function RollingNumber({ text, color, className }: { text: string; color: string; className?: string }) {
   return (
     <span className={className} style={{ display: "inline-flex", fontVariantNumeric: "tabular-nums" }}>
-      {text.split("").map((ch, i) => (
+      {text.replace(/ /g, "\u00A0").split("").map((ch, i) => (
         <RollingDigit key={i} digit={ch} color={color} />
       ))}
     </span>

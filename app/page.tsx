@@ -453,6 +453,12 @@ const price = selectedFootballMarket
         const matches = (marketType: string) => {
           if (marketType === "BTC_5MIN") return false; // already shown via its own dedicated live card
           if (activeFilter === "All") return true; // every other real market, unfiltered by category
+          // "FOOTBALL" is a legacy standalone top-level category, separate
+          // from "SPORTS" -- a market created under it (instead of the
+          // intended "Sports > Football" subcategory) would otherwise be
+          // permanently invisible under the Sports tab. Treated as
+          // equivalent here so those markets still show up correctly.
+          if (activeFilter === "SPORTS" && marketType === "FOOTBALL") return true;
           return sub ? marketType === `${cat}_${sub}` : marketType === cat || marketType.startsWith(`${cat}_`);
         };
         const withClosed: FootballMarket[] = data
@@ -1202,7 +1208,7 @@ const price = selectedFootballMarket
               const openMarkets = footballMarkets.filter((m) => !m.closed);
               const ungrouped = openMarkets.filter((m) => !m.league);
               const leagueNames = Array.from(new Set(openMarkets.filter((m) => m.league).map((m) => m.league as string)));
-              const CARDS_PER_LEAGUE_PREVIEW = 3;
+              const CARDS_PER_LEAGUE_PREVIEW = 5;
 
               const toggleLeague = (name: string) => {
                 setExpandedLeagues((prev) => {

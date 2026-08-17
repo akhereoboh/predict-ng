@@ -89,7 +89,14 @@ export default function AdminPage() {
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
   const [categoryError, setCategoryError] = useState<string | null>(null);
 
-  const topLevelCategories = categories.filter((c) => !c.parent).map((c) => c.name);
+  // "FOOTBALL" is a legacy standalone top-level category that predates
+  // "SPORTS". Picking it here instead of "Sports" (with Football as the
+  // subcategory) creates a market that's permanently invisible under the
+  // Sports tab on the homepage, with no warning. Hidden from selection
+  // here going forward -- the DB row itself is untouched, since existing
+  // markets still reference it and the homepage filter now treats it as
+  // equivalent to Sports for backward compatibility.
+  const topLevelCategories = categories.filter((c) => !c.parent && c.name !== "FOOTBALL").map((c) => c.name);
   const subcategoriesForSelected = categories.filter((c) => c.parent === category).map((c) => c.name);
 
   const fetchCategories = useCallback(async () => {

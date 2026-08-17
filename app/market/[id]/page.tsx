@@ -471,6 +471,7 @@ export default function MarketPage() {
         anchorTopRef.current?.update({ time: now, value: 80 });
         anchorBottomRef.current?.update({ time: now, value: 20 });
         if (data.prices) {
+          const positions: { name: string; x: number; y: number }[] = [];
           for (const [name, price] of Object.entries(data.prices)) {
             const s = multiSeriesRef.current.get(name);
             s?.update({ time: now, value: price });
@@ -479,13 +480,31 @@ export default function MarketPage() {
               const x = chartApiRef.current.timeScale().timeToCoordinate(now);
               const y = s.priceToCoordinate(price);
               if (x != null && y != null) {
-                labelEl.style.left = `${x + 8}px`;
-                labelEl.style.top = `${y}px`;
-                labelEl.style.visibility = "visible";
+                positions.push({ name, x, y });
               } else {
                 labelEl.style.visibility = "hidden";
               }
             }
+          }
+          // Minimum separation between labels -- when two outcomes are at
+          // the exact same (or very close) price, their labels would
+          // otherwise land on top of each other and become illegible.
+          // Real chart-line positions are untouched -- only the label
+          // text position gets nudged apart.
+          const MIN_LABEL_GAP = 34;
+          positions.sort((a, b) => a.y - b.y);
+          for (let i = 1; i < positions.length; i++) {
+            const gap = positions[i].y - positions[i - 1].y;
+            if (gap < MIN_LABEL_GAP) {
+              positions[i].y = positions[i - 1].y + MIN_LABEL_GAP;
+            }
+          }
+          for (const { name, x, y } of positions) {
+            const labelEl = multiLabelRefs.current.get(name);
+            if (!labelEl) continue;
+            labelEl.style.left = `${x + 8}px`;
+            labelEl.style.top = `${y}px`;
+            labelEl.style.visibility = "visible";
           }
         } else {
           seriesRef.current?.update({ time: now, value: data.price_yes });

@@ -719,7 +719,7 @@ const price = selectedFootballMarket
                       outcomeEntries.length <= 2 ? "px-7 py-2.5 text-sm min-w-[7.5rem]" : "px-5 py-2 text-xs min-w-[6rem]"
                     } ${sportsPillColorFor(name)}`}
                   >
-                    {name.slice(0, 3).toUpperCase()} {Math.floor(price)}e
+                    <RollingNumber text={`${name.slice(0, 3).toUpperCase()} ${Math.floor(price)}e`} color="#FFFFFF" />
                   </button>
                 ))}
               </div>
@@ -867,7 +867,7 @@ const price = selectedFootballMarket
                             onMouseLeave={() => setHoverSide(null)}
                             className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${yesColor.pill}`}
                           >
-                            Buy YES · {Math.floor(m.price_yes ?? 0)}e
+                            <RollingNumber text={`Buy YES · ${Math.floor(m.price_yes ?? 0)}e`} color="#FFFFFF" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
@@ -875,7 +875,7 @@ const price = selectedFootballMarket
                             onMouseLeave={() => setHoverSide(null)}
                             className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${noColor.pill}`}
                           >
-                            Buy NO · {Math.floor(m.price_no ?? 0)}e
+                            <RollingNumber text={`Buy NO · ${Math.floor(m.price_no ?? 0)}e`} color="#FFFFFF" />
                           </button>
                         </div>
                       </>
@@ -898,13 +898,13 @@ const price = selectedFootballMarket
                               onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                               className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${yesColor.pill}`}
                             >
-                              YES {Math.floor(m.price_yes ?? 0)}e
+                              <RollingNumber text={`YES ${Math.floor(m.price_yes ?? 0)}e`} color="#FFFFFF" />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
                               className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${noColor.pill}`}
                             >
-                              NO {Math.floor(m.price_no ?? 0)}e
+                              <RollingNumber text={`NO ${Math.floor(m.price_no ?? 0)}e`} color="#FFFFFF" />
                             </button>
                           </div>
                         </div>
@@ -1151,13 +1151,13 @@ const price = selectedFootballMarket
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
                     className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
                   >
-                    Buy Up · {Math.round(yes)}e
+                    <RollingNumber text={`Buy Up · ${Math.round(yes)}e`} color={theme === "dark" ? "#000000" : "#FFFFFF"} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                   >
-                    Buy Down · {Math.round(no)}e
+                    <RollingNumber text={`Buy Down · ${Math.round(no)}e`} color="#FFFFFF" />
                   </button>
                 </div>
               </div>

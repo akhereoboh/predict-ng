@@ -293,6 +293,15 @@ export default function MarketPage() {
   const anchorBottomRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [chartReady, setChartReady] = useState(false);
   const [multiSeriesCreated, setMultiSeriesCreated] = useState(false);
+  const POLL_MS = 5000;
+  // Smooth glide, same technique as the BTC page: each real poll sets a
+  // new "last" target and shifts the old "last" into "prev". A separate,
+  // much faster loop below interpolates between them continuously instead
+  // of the line jumping the instant new data arrives every 5 seconds.
+  const prevBinaryRef = useRef<{ value: number; time: number } | null>(null);
+  const lastBinaryRef = useRef<{ value: number; time: number } | null>(null);
+  const prevMultiRef = useRef<{ prices: Record<string, number>; time: number } | null>(null);
+  const lastMultiRef = useRef<{ prices: Record<string, number>; time: number } | null>(null);
 
   // Same hash-based color system used on the homepage cards, so a team's
   // line color here matches its color on the card you clicked in from.
@@ -471,7 +480,9 @@ export default function MarketPage() {
     })();
   }, [isRealMarket, chartReady, id, realMarket, multiSeriesCreated]);
 
-  // Poll the live market state and keep the chart's latest point current.
+  // Poll the live market state -- records the new target for the glide
+  // loop below to interpolate toward, rather than updating the chart
+  // directly (which is what caused it to jump instead of glide).
   useEffect(() => {
     if (!isRealMarket) return;
     let cancelled = false;
@@ -483,88 +494,106 @@ export default function MarketPage() {
         if (cancelled) return;
         setRealMarket(data);
         setRealIsClosed(data.status !== "OPEN" || (!!data.close_at && new Date(data.close_at).getTime() <= Date.now()));
-        const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
-        anchorTopRef.current?.update({ time: now, value: 80 });
-        anchorBottomRef.current?.update({ time: now, value: 20 });
+        const nowMs = Date.now();
         if (data.prices) {
-          // Minimum visual separation for the LINES themselves, not just
-          // the labels -- when two outcomes are at the same or very close
-          // real price, their lines would otherwise sit exactly on top of
-          // each other. This nudges the DRAWN position apart by a fixed
-          // amount (matching how far apart you asked for: roughly a
-          // 60/40 split when tied) -- purely a rendering choice. The
-          // label TEXT still shows the real, accurate percentage, and
-          // nothing here touches realMarket.prices, the trade panel, or
-          // any actual trading/payout logic -- those stay 100% real.
-          const MIN_VALUE_GAP = 20;
-          const sorted = Object.entries(data.prices).sort((a, b) => a[1] - b[1]);
-          const displayValue = new Map<string, number>();
-          sorted.forEach(([name, price]) => displayValue.set(name, price));
-          // If the whole cluster of values is tighter than the minimum
-          // required spread, redistribute them symmetrically around their
-          // shared average -- for exactly two tied outcomes at 50/50,
-          // this puts one at 40 and the other at 60, centered on 50, not
-          // pushed up from whichever happened to sort first.
-          const values = sorted.map(([, p]) => p);
-          const requiredSpan = MIN_VALUE_GAP * (sorted.length - 1);
-          const actualSpan = values[values.length - 1] - values[0];
-          if (actualSpan < requiredSpan) {
-            const avg = values.reduce((a, b) => a + b, 0) / values.length;
-            const startValue = avg - requiredSpan / 2;
-            sorted.forEach(([name], i) => displayValue.set(name, startValue + i * MIN_VALUE_GAP));
-          }
-
-          const positions: { name: string; x: number; y: number }[] = [];
-          for (const [name, realPrice] of Object.entries(data.prices)) {
-            const s = multiSeriesRef.current.get(name);
-            s?.update({ time: now, value: displayValue.get(name) ?? realPrice });
-            const labelEl = multiLabelRefs.current.get(name);
-            if (labelEl) {
-              const pctEl = labelEl.querySelector<HTMLElement>("[data-pct]");
-              if (pctEl) pctEl.textContent = `${Math.floor(realPrice)}%`;
-            }
-            if (s && labelEl && chartApiRef.current) {
-              const x = chartApiRef.current.timeScale().timeToCoordinate(now);
-              const y = s.priceToCoordinate(displayValue.get(name) ?? realPrice);
-              if (x != null && y != null) {
-                positions.push({ name, x, y });
-              } else {
-                labelEl.style.visibility = "hidden";
-              }
-            }
-          }
-          // Minimum separation between labels too, as a second safety net
-          // (the line-position nudge above already prevents most overlap,
-          // this catches any remaining edge cases from label height itself).
-          const MIN_LABEL_GAP = 34;
-          positions.sort((a, b) => a.y - b.y);
-          for (let i = 1; i < positions.length; i++) {
-            const gap = positions[i].y - positions[i - 1].y;
-            if (gap < MIN_LABEL_GAP) {
-              positions[i].y = positions[i - 1].y + MIN_LABEL_GAP;
-            }
-          }
-          for (const { name, x, y } of positions) {
-            const labelEl = multiLabelRefs.current.get(name);
-            if (!labelEl) continue;
-            labelEl.style.left = `${x + 8}px`;
-            labelEl.style.top = `${y}px`;
-            labelEl.style.visibility = "visible";
-          }
+          prevMultiRef.current = lastMultiRef.current ?? { prices: data.prices, time: nowMs };
+          lastMultiRef.current = { prices: data.prices, time: nowMs };
         } else {
-          seriesRef.current?.update({ time: now, value: data.price_yes });
+          prevBinaryRef.current = lastBinaryRef.current ?? { value: data.price_yes, time: nowMs };
+          lastBinaryRef.current = { value: data.price_yes, time: nowMs };
         }
       } catch {
         // keep showing the last known state on a blip
       }
     };
     poll();
-    const intervalId = setInterval(poll, 5000);
+    const intervalId = setInterval(poll, POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
     };
   }, [isRealMarket, id]);
+
+  // The actual glide -- runs far more often than the poll, so the line
+  // (and its label) moves continuously toward each new real price instead
+  // of jumping the instant a new poll lands. Anchors also get refreshed
+  // here so their timestamp always keeps up with the moving time axis.
+  useEffect(() => {
+    if (!isRealMarket) return;
+    const id = setInterval(() => {
+      if (!chartApiRef.current) return;
+      const now = (Date.now() / 1000) as UTCTimestamp;
+      anchorTopRef.current?.update({ time: now, value: 80 });
+      anchorBottomRef.current?.update({ time: now, value: 20 });
+
+      if (lastMultiRef.current) {
+        const prev = prevMultiRef.current ?? lastMultiRef.current;
+        const last = lastMultiRef.current;
+        const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
+        const realPrices: Record<string, number> = {};
+        for (const name of Object.keys(last.prices)) {
+          const p = prev.prices[name] ?? last.prices[name];
+          realPrices[name] = p + (last.prices[name] - p) * frac;
+        }
+
+        // Same minimum-visual-separation logic as before, just now
+        // computed every glide tick against the interpolated values
+        // instead of once per discrete poll.
+        const MIN_VALUE_GAP = 20;
+        const sorted = Object.entries(realPrices).sort((a, b) => a[1] - b[1]);
+        const displayValue = new Map<string, number>();
+        sorted.forEach(([name, price]) => displayValue.set(name, price));
+        const values = sorted.map(([, p]) => p);
+        const requiredSpan = MIN_VALUE_GAP * (sorted.length - 1);
+        const actualSpan = values[values.length - 1] - values[0];
+        if (actualSpan < requiredSpan) {
+          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+          const startValue = avg - requiredSpan / 2;
+          sorted.forEach(([name], i) => displayValue.set(name, startValue + i * MIN_VALUE_GAP));
+        }
+
+        const positions: { name: string; x: number; y: number }[] = [];
+        for (const [name, realPrice] of Object.entries(realPrices)) {
+          const s = multiSeriesRef.current.get(name);
+          s?.update({ time: now, value: displayValue.get(name) ?? realPrice });
+          const labelEl = multiLabelRefs.current.get(name);
+          if (labelEl) {
+            const pctEl = labelEl.querySelector<HTMLElement>("[data-pct]");
+            if (pctEl) pctEl.textContent = `${Math.floor(realPrice)}%`;
+          }
+          if (s && labelEl) {
+            const x = chartApiRef.current.timeScale().timeToCoordinate(now);
+            const y = s.priceToCoordinate(displayValue.get(name) ?? realPrice);
+            if (x != null && y != null) {
+              positions.push({ name, x, y });
+            } else {
+              labelEl.style.visibility = "hidden";
+            }
+          }
+        }
+        const MIN_LABEL_GAP = 34;
+        positions.sort((a, b) => a.y - b.y);
+        for (let i = 1; i < positions.length; i++) {
+          const gap = positions[i].y - positions[i - 1].y;
+          if (gap < MIN_LABEL_GAP) positions[i].y = positions[i - 1].y + MIN_LABEL_GAP;
+        }
+        for (const { name, x, y } of positions) {
+          const labelEl = multiLabelRefs.current.get(name);
+          if (!labelEl) continue;
+          labelEl.style.left = `${x + 8}px`;
+          labelEl.style.top = `${y}px`;
+          labelEl.style.visibility = "visible";
+        }
+      } else if (lastBinaryRef.current && seriesRef.current) {
+        const prev = prevBinaryRef.current ?? lastBinaryRef.current;
+        const last = lastBinaryRef.current;
+        const frac = Math.min(1, Math.max(0, (Date.now() - last.time) / POLL_MS));
+        const interpolated = prev.value + (last.value - prev.value) * frac;
+        seriesRef.current.update({ time: now, value: interpolated });
+      }
+    }, 65);
+    return () => clearInterval(id);
+  }, [isRealMarket]);
 
   useEffect(() => {
     if (!realMarket?.prices || selectedRealOutcome) return;
@@ -759,12 +788,9 @@ export default function MarketPage() {
             ) : (
               ["Yes", "No"].map((s) => (
                 <button key={s} onClick={() => setSide(s.toUpperCase() as "YES" | "NO")}
+                  style={side === s.toUpperCase() && realMarket ? { backgroundColor: s === "Yes" ? binYesColor(realMarket.id) : binNoColor(realMarket.id) } : undefined}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition-colors ${
-                    side === s.toUpperCase()
-                      ? s === "Yes"
-                        ? theme === "dark" ? "bg-green-500 border-transparent text-black" : `${t.accent} border-transparent text-white`
-                        : theme === "dark" ? "bg-red-500 border-transparent text-white" : "bg-[#6B0D0D] border-transparent text-white"
-                      : `${t.navBg} ${t.border} ${t.textMuted}`
+                    side === s.toUpperCase() ? "border-transparent text-white" : `${t.navBg} ${t.border} ${t.textMuted}`
                   }`}
                 >{s}</button>
               ))
@@ -919,7 +945,7 @@ export default function MarketPage() {
                           isSelected ? "text-white" : `${t.inputBg} ${t.textMuted}`
                         }`}
                       >
-                        {name} {(p / 100).toFixed(2)}e
+                        <RollingNumber text={`${name} ${(p / 100).toFixed(2)}e`} color={isSelected ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                       </button>
                     );
                   })}
@@ -927,18 +953,20 @@ export default function MarketPage() {
               ) : (
                 <div className="flex gap-2 mb-2">
                   <button onClick={() => setSide("YES")}
+                    style={side === "YES" && realMarket ? { backgroundColor: binYesColor(realMarket.id) } : undefined}
                     className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                      side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
+                      side === "YES" ? "text-white" : `${t.inputBg} ${t.textMuted}`
                     }`}
                   >
-                    Up {realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e
+                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Up" : "Yes"} ${realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e`} color={side === "YES" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                   </button>
                   <button onClick={() => setSide("NO")}
+                    style={side === "NO" && realMarket ? { backgroundColor: binNoColor(realMarket.id) } : undefined}
                     className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                      side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
+                      side === "NO" ? "text-white" : `${t.inputBg} ${t.textMuted}`
                     }`}
                   >
-                    Down {realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e
+                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Down" : "No"} ${realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e`} color={side === "NO" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                   </button>
                 </div>
               )}

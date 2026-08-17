@@ -471,14 +471,40 @@ export default function MarketPage() {
         anchorTopRef.current?.update({ time: now, value: 80 });
         anchorBottomRef.current?.update({ time: now, value: 20 });
         if (data.prices) {
+          // Minimum visual separation for the LINES themselves, not just
+          // the labels -- when two outcomes are at the same or very close
+          // real price, their lines would otherwise sit exactly on top of
+          // each other. This nudges the DRAWN position apart by a fixed
+          // amount (matching how far apart you asked for: roughly a
+          // 60/40 split when tied) -- purely a rendering choice. The
+          // label TEXT still shows the real, accurate percentage, and
+          // nothing here touches realMarket.prices, the trade panel, or
+          // any actual trading/payout logic -- those stay 100% real.
+          const MIN_VALUE_GAP = 20;
+          const sorted = Object.entries(data.prices).sort((a, b) => a[1] - b[1]);
+          const displayValue = new Map<string, number>();
+          sorted.forEach(([name, price]) => displayValue.set(name, price));
+          for (let i = 1; i < sorted.length; i++) {
+            const prevName = sorted[i - 1][0];
+            const name = sorted[i][0];
+            const gap = displayValue.get(name)! - displayValue.get(prevName)!;
+            if (gap < MIN_VALUE_GAP) {
+              displayValue.set(name, displayValue.get(prevName)! + MIN_VALUE_GAP);
+            }
+          }
+
           const positions: { name: string; x: number; y: number }[] = [];
-          for (const [name, price] of Object.entries(data.prices)) {
+          for (const [name, realPrice] of Object.entries(data.prices)) {
             const s = multiSeriesRef.current.get(name);
-            s?.update({ time: now, value: price });
+            s?.update({ time: now, value: displayValue.get(name) ?? realPrice });
             const labelEl = multiLabelRefs.current.get(name);
+            if (labelEl) {
+              const pctEl = labelEl.querySelector<HTMLElement>("[data-pct]");
+              if (pctEl) pctEl.textContent = `${Math.floor(realPrice)}%`;
+            }
             if (s && labelEl && chartApiRef.current) {
               const x = chartApiRef.current.timeScale().timeToCoordinate(now);
-              const y = s.priceToCoordinate(price);
+              const y = s.priceToCoordinate(displayValue.get(name) ?? realPrice);
               if (x != null && y != null) {
                 positions.push({ name, x, y });
               } else {
@@ -486,11 +512,9 @@ export default function MarketPage() {
               }
             }
           }
-          // Minimum separation between labels -- when two outcomes are at
-          // the exact same (or very close) price, their labels would
-          // otherwise land on top of each other and become illegible.
-          // Real chart-line positions are untouched -- only the label
-          // text position gets nudged apart.
+          // Minimum separation between labels too, as a second safety net
+          // (the line-position nudge above already prevents most overlap,
+          // this catches any remaining edge cases from label height itself).
           const MIN_LABEL_GAP = 34;
           positions.sort((a, b) => a.y - b.y);
           for (let i = 1; i < positions.length; i++) {
@@ -744,7 +768,7 @@ export default function MarketPage() {
                     style={{ position: "absolute", visibility: "hidden", transform: "translateY(-50%)", pointerEvents: "none", zIndex: 10 }}
                   >
                     <div className="text-xs" style={{ color }}>{name}</div>
-                    <div className="text-lg font-bold leading-tight" style={{ color }}>{Math.floor(realMarket.prices![name])}%</div>
+                    <div data-pct className="text-lg font-bold leading-tight" style={{ color }}>{Math.floor(realMarket.prices![name])}%</div>
                   </div>
                 );
               })}

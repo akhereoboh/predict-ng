@@ -504,7 +504,7 @@ export default function BtcLive() {
                   <p className="text-xs font-medium text-green-500 mb-2">UP Bids</p>
                   {[0.48, 0.49, 0.50, 0.51].map((p, i) => (
                     <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-green-500 font-medium">{p.toFixed(2)}e</span>
+                      <span className="text-green-500 font-medium">₦{p.toFixed(2)}</span>
                       <span>{orderBookLiquidity.up[i]}</span>
                     </div>
                   ))}
@@ -513,7 +513,7 @@ export default function BtcLive() {
                   <p className="text-xs font-medium text-red-500 mb-2">DOWN Bids</p>
                   {[0.49, 0.50, 0.51, 0.52].map((p, i) => (
                     <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-red-500 font-medium">{p.toFixed(2)}e</span>
+                      <span className="text-red-500 font-medium">₦{p.toFixed(2)}</span>
                       <span>{orderBookLiquidity.down[i]}</span>
                     </div>
                   ))}
@@ -591,19 +591,19 @@ export default function BtcLive() {
                   side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Up {(yes / 100).toFixed(2)}e
+                Up ₦{(yes / 100).toFixed(2)}
               </button>
               <button onClick={() => setSide("NO")}
                 className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
                   side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Down {(no / 100).toFixed(2)}e
+                Down ₦{(no / 100).toFixed(2)}
               </button>
             </div>
 
             <div className="flex justify-between items-center mb-2">
-              <span className={`text-xs ${t.textMuted}`}>{amount}.00e cash</span>
+              <span className={`text-xs ${t.textMuted}`}>₦{amount}.00 cash</span>
               <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
                 {editing ? "Done" : "Edit"}
               </button>
@@ -636,9 +636,9 @@ export default function BtcLive() {
                         : `${t.inputBg} ${t.textPrimary}`
                     }`}
                   >
-                    <span className="text-sm font-bold">{a}e</span>
+                    <span className="text-sm font-bold">₦{a}</span>
                     <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-green-500"}`}>
-                      win {price > 0 ? (a / price).toFixed(0) : "0"}e
+                      win ₦{price > 0 ? (a / price).toFixed(0) : "0"}
                     </span>
                   </button>
                 ))}
@@ -647,7 +647,7 @@ export default function BtcLive() {
 
             <div className="text-center py-1">
               <span className={`text-xs ${t.textMuted}`}>Potential win if {side === "YES" ? "Up" : "Down"}: </span>
-              <span className={`text-sm font-bold ${t.accentText}`}>{payout}e</span>
+              <span className={`text-sm font-bold ${t.accentText}`}>₦{payout}</span>
               <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
             </div>
 

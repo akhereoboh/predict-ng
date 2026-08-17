@@ -102,13 +102,13 @@ export default function More() {
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {isLoggedIn ? (totalValueNaira != null ? `${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                  {isLoggedIn ? (totalValueNaira != null ? `₦${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {isLoggedIn ? (cashNaira != null ? `${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                  {isLoggedIn ? (cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>
             </div>

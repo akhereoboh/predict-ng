@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import RollingNumber from "./components/RollingNumber";
 import { useTheme } from "./context/theme";
 import { useState, useRef, useEffect } from "react";
@@ -141,9 +141,31 @@ type CategoryEntry = { name: string; parent: string | null };
 
 export default function Home() {
   const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, logout, getValidToken, refreshPortfolio } = useTheme();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [categories, setCategories] = useState<CategoryEntry[]>([]);
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  // Persisted in the URL (?filter=SPORTS) rather than plain local state --
+  // local state resets to "All" every time this page remounts, which is
+  // exactly what happens when you click into a market and then hit Back.
+  // Reading the filter from the URL on mount, and keeping the URL in sync
+  // whenever it changes, means router.back() actually lands you back on
+  // the section you were browsing, not always the All page.
+  const [activeFilter, setActiveFilterState] = useState(() => searchParams.get("filter") || "All");
+  const [activeSubcategory, setActiveSubcategoryState] = useState<string | null>(() => searchParams.get("sub") || null);
+
+  const setActiveFilter = (filter: string) => {
+    setActiveFilterState(filter);
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    if (filter === "All") params.delete("filter"); else params.set("filter", filter);
+    params.delete("sub");
+    router.replace(params.toString() ? `/?${params.toString()}` : "/", { scroll: false });
+  };
+  const setActiveSubcategory = (sub: string | null) => {
+    setActiveSubcategoryState(sub);
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    if (sub) params.set("sub", sub); else params.delete("sub");
+    router.replace(params.toString() ? `/?${params.toString()}` : "/", { scroll: false });
+  };
 
   useEffect(() => {
     fetch("https://sireai.uk/pm-api/categories")
@@ -216,7 +238,6 @@ export default function Home() {
     volume_naira: number | null;
     trader_count: number | null;
   } | null>(null);
-  const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
   const cardEls = useRef<HTMLDivElement[]>([]);
@@ -699,16 +720,21 @@ const price = selectedFootballMarket
                records to show on the left the way Polymarket does, so
                it's just the names. */
             <div className="flex items-center justify-between gap-3 pt-8 pb-2 mb-2">
-              <div className="flex flex-col gap-3 shrink-0">
-                {outcomeEntries.map(([name]) => (
-                  <div key={name} className="flex items-center gap-2">
-                    {logoFor(name) && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logoFor(name)} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
-                    )}
-                    <span className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-1 shrink-0">
+                <p className={`text-xs ${t.textMuted} mb-1`}>
+                  ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {outcomeEntries.map(([name]) => (
+                    <div key={name} className="flex items-center gap-2">
+                      {logoFor(name) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoFor(name)} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                      )}
+                      <span className={`text-sm font-medium ${t.textPrimary}`}>{name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="flex gap-2 flex-1 justify-end">
                 {outcomeEntries.map(([name, price]) => (
@@ -719,7 +745,7 @@ const price = selectedFootballMarket
                       outcomeEntries.length <= 2 ? "px-7 py-2.5 text-sm min-w-[7.5rem]" : "px-5 py-2 text-xs min-w-[6rem]"
                     } ${sportsPillColorFor(name)}`}
                   >
-                    <RollingNumber text={`${name.slice(0, 3).toUpperCase()} ${Math.floor(price)}e`} color="#FFFFFF" />
+                    <RollingNumber text={`${name.slice(0, 3).toUpperCase()} ₦${Math.floor(price)}`} color="#FFFFFF" />
                   </button>
                 ))}
               </div>
@@ -743,7 +769,7 @@ const price = selectedFootballMarket
                   {outcomeEntries.map(([name, price]) => (
                     <div key={name} className="flex flex-col items-center">
                       <RollingNumber
-                        text={`${Math.floor(price)}e`}
+                        text={`₦${Math.floor(price)}`}
                         color={hexColorFor(name)}
                         className="text-base font-bold"
                       />
@@ -780,9 +806,9 @@ const price = selectedFootballMarket
                   </button>
                 ))}
               </div>
+              <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
             </>
           )}
-          <p className={`text-xs ${t.textMuted}`}>₦{m.volume_naira.toLocaleString()} vol · {m.trader_count} traders</p>
         </div>
       );
     }
@@ -841,11 +867,11 @@ const price = selectedFootballMarket
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex gap-3">
                             <div className="flex flex-col items-center">
-                              <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={yesColor.hex} className="text-base font-bold" />
+                              <RollingNumber text={`₦${Math.floor(m.price_yes ?? 0)}`} color={yesColor.hex} className="text-base font-bold" />
                               <span className={`text-xs ${t.textMuted}`}>YES</span>
                             </div>
                             <div className="flex flex-col items-center">
-                              <RollingNumber text={`${Math.floor(m.price_no ?? 0)}e`} color={noColor.hex} className="text-base font-bold" />
+                              <RollingNumber text={`₦${Math.floor(m.price_no ?? 0)}`} color={noColor.hex} className="text-base font-bold" />
                               <span className={`text-xs ${t.textMuted}`}>NO</span>
                             </div>
                           </div>
@@ -867,7 +893,7 @@ const price = selectedFootballMarket
                             onMouseLeave={() => setHoverSide(null)}
                             className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${yesColor.pill}`}
                           >
-                            <RollingNumber text={`Buy YES · ${Math.floor(m.price_yes ?? 0)}e`} color="#FFFFFF" />
+                            <RollingNumber text={`Buy YES · ₦${Math.floor(m.price_yes ?? 0)}`} color="#FFFFFF" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
@@ -875,7 +901,7 @@ const price = selectedFootballMarket
                             onMouseLeave={() => setHoverSide(null)}
                             className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors text-white ${noColor.pill}`}
                           >
-                            <RollingNumber text={`Buy NO · ${Math.floor(m.price_no ?? 0)}e`} color="#FFFFFF" />
+                            <RollingNumber text={`Buy NO · ₦${Math.floor(m.price_no ?? 0)}`} color="#FFFFFF" />
                           </button>
                         </div>
                       </>
@@ -887,7 +913,10 @@ const price = selectedFootballMarket
                             means nothing -- the question itself is the
                             only thing that makes the market legible, so
                             it stays even in the compact Sports layout. */}
-                        <p className={`text-sm font-medium ${t.textPrimary} mb-2`}>{m.question}</p>
+                        <p className={`text-sm font-medium ${t.textPrimary} mb-1`}>{m.question}</p>
+                        <p className={`text-xs ${t.textMuted} mb-2`}>
+                          ₦{m.volume_naira.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {m.trader_count} trader{m.trader_count === 1 ? "" : "s"}
+                        </p>
                         <div className="flex items-center justify-between gap-3 pt-2 pb-2">
                           <div className="flex flex-col gap-8 shrink-0">
                             <span className={`text-sm font-medium ${t.textPrimary}`}>YES</span>
@@ -898,13 +927,13 @@ const price = selectedFootballMarket
                               onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                               className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${yesColor.pill}`}
                             >
-                              <RollingNumber text={`YES ${Math.floor(m.price_yes ?? 0)}e`} color="#FFFFFF" />
+                              <RollingNumber text={`YES ₦${Math.floor(m.price_yes ?? 0)}`} color="#FFFFFF" />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); selectFootball("NO"); }}
                               className={`px-7 py-2.5 text-sm min-w-[7.5rem] rounded-xl font-bold border-none cursor-pointer transition-colors whitespace-nowrap text-white ${noColor.pill}`}
                             >
-                              <RollingNumber text={`NO ${Math.floor(m.price_no ?? 0)}e`} color="#FFFFFF" />
+                              <RollingNumber text={`NO ₦${Math.floor(m.price_no ?? 0)}`} color="#FFFFFF" />
                             </button>
                           </div>
                         </div>
@@ -930,13 +959,13 @@ const price = selectedFootballMarket
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {isLoggedIn ? (totalValueNaira != null ? `${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                  {isLoggedIn ? (totalValueNaira != null ? `₦${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>
               <div className="flex flex-col items-end">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {isLoggedIn ? (cashNaira != null ? `${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}e` : "…") : "0e"}
+                  {isLoggedIn ? (cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>
             </div>
@@ -1129,11 +1158,11 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
+                      <RollingNumber text={`₦${Math.round(yes)}`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(no)}e`} color={theme === "dark" ? "#EF4444" : "#6B0D0D"} className="text-base font-bold" />
+                      <RollingNumber text={`₦${Math.round(no)}`} color={theme === "dark" ? "#EF4444" : "#6B0D0D"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
@@ -1151,13 +1180,13 @@ const price = selectedFootballMarket
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
                     className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
                   >
-                    <RollingNumber text={`Buy Up · ${Math.round(yes)}e`} color={theme === "dark" ? "#000000" : "#FFFFFF"} />
+                    <RollingNumber text={`Buy Up · ₦${Math.round(yes)}`} color={theme === "dark" ? "#000000" : "#FFFFFF"} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                   >
-                    <RollingNumber text={`Buy Down · ${Math.round(no)}e`} color="#FFFFFF" />
+                    <RollingNumber text={`Buy Down · ₦${Math.round(no)}`} color="#FFFFFF" />
                   </button>
                 </div>
               </div>
@@ -1302,11 +1331,11 @@ const price = selectedFootballMarket
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>{Math.round(market.yesPrice * 100)}e</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-green-400" : t.accentText}`}>₦{Math.round(market.yesPrice * 100)}</span>
                         <span className={`text-xs ${t.textMuted}`}>YES</span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>{Math.round(market.noPrice * 100)}e</span>
+                        <span className={`text-base font-bold ${theme === "dark" ? "text-red-500" : "text-[#6B0D0D]"}`}>₦{Math.round(market.noPrice * 100)}</span>
                         <span className={`text-xs ${t.textMuted}`}>NO</span>
                       </div>
                     </div>
@@ -1412,7 +1441,7 @@ const price = selectedFootballMarket
                       : `border border-white/20 bg-[#080808] text-white`
                   }`}
                 >
-                  {a}e
+                  ₦{a}
                 </button>
               ))}
             </div>
@@ -1420,19 +1449,19 @@ const price = selectedFootballMarket
             <div className={`${t.summaryBg} border ${t.borderLight} rounded-lg p-3 mb-4 flex flex-col gap-2`}>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>{side} price</span>
-                <RollingNumber text={`${price.toFixed(2)}e per contract`} color={theme === "dark" ? "#B0B0B0" : "#64748B"} />
+                <RollingNumber text={`₦${price.toFixed(2)} per contract`} color={theme === "dark" ? "#B0B0B0" : "#64748B"} />
               </div>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
                 <span>Contracts</span><span>{contracts}</span>
               </div>
               <div className={`flex justify-between text-xs ${theme === "dark" ? "text-white/70" : t.textMuted}`}>
-                <span>Fee (2%)</span><span>{fee}e</span>
+                <span>Fee (2%)</span><span>₦{fee}</span>
               </div>
               <div className={`h-px ${theme === "dark" ? "bg-zinc-700" : "bg-slate-200"}`} />
               <div className={`flex justify-between text-sm font-semibold ${t.textPrimary}`}>
                 <span>Payout if {side}</span>
                 <RollingNumber
-                  text={`${payout.toFixed(2)}e`}
+                  text={`₦${payout.toFixed(2)}`}
                   color={
                     theme === "dark"
                       ? activeSide === "YES" ? "#00E676" : activeSide === "NO" ? "#FF3131" : "#00E676"
@@ -1477,9 +1506,9 @@ const price = selectedFootballMarket
             <p className={`text-xs font-medium ${theme === "dark" ? "text-white/80" : t.textMuted} uppercase tracking-widest mb-3`}>Your positions</p>
             <div className="flex flex-col gap-2">
               {[
-                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+84e", up: true },
-                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+32e", up: true },
-                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−120e", up: false },
+                { label: "Peter Obi 2027", side: "YES", contracts: 14, pnl: "+₦84", up: true },
+                { label: "AFCON Nigeria", side: "NO", contracts: 8, pnl: "+₦32", up: true },
+                { label: "Inflation below 20%", side: "YES", contracts: 20, pnl: "−₦120", up: false },
               ].map((pos) => (
                 <div key={pos.label} className={`flex items-center justify-between py-1.5 border-b ${t.borderLight} last:border-0`}>
                   <div>

@@ -559,7 +559,11 @@ export default function MarketPage() {
           const labelEl = multiLabelRefs.current.get(name);
           if (labelEl) {
             const pctEl = labelEl.querySelector<HTMLElement>("[data-pct]");
-            if (pctEl) pctEl.textContent = `${Math.floor(realPrice)}%`;
+            // The real, last-polled value -- not the interpolated one --
+            // so the number only changes once per real poll (~5s) instead
+            // of flickering on every glide tick. The line and the label's
+            // position still move smoothly; only this text is throttled.
+            if (pctEl) pctEl.textContent = `${Math.floor(last.prices[name])}%`;
           }
           if (s && labelEl) {
             const x = chartApiRef.current.timeScale().timeToCoordinate(now);
@@ -857,7 +861,7 @@ export default function MarketPage() {
                     <p className="text-xs font-medium text-emerald-500 mb-2">YES Bids</p>
                     {orderBookLiquidity.yes.map((row) => (
                       <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                        <span className="text-emerald-500 font-medium">{row.p.toFixed(2)}e</span>
+                        <span className="text-emerald-500 font-medium">₦{row.p.toFixed(2)}</span>
                         <span>{row.qty}</span>
                       </div>
                     ))}
@@ -866,7 +870,7 @@ export default function MarketPage() {
                     <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
                     {orderBookLiquidity.no.map((row) => (
                       <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                        <span className="text-[#6B0D0D] font-medium">{row.p.toFixed(2)}e</span>
+                        <span className="text-[#6B0D0D] font-medium">₦{row.p.toFixed(2)}</span>
                         <span>{row.qty}</span>
                       </div>
                     ))}
@@ -945,7 +949,7 @@ export default function MarketPage() {
                           isSelected ? "text-white" : `${t.inputBg} ${t.textMuted}`
                         }`}
                       >
-                        <RollingNumber text={`${name} ${(p / 100).toFixed(2)}e`} color={isSelected ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
+                        <RollingNumber text={`${name} ₦${(p / 100).toFixed(2)}`} color={isSelected ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                       </button>
                     );
                   })}
@@ -958,7 +962,7 @@ export default function MarketPage() {
                       side === "YES" ? "text-white" : `${t.inputBg} ${t.textMuted}`
                     }`}
                   >
-                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Up" : "Yes"} ${realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}e`} color={side === "YES" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
+                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Up" : "Yes"} ₦${realMarket ? (realMarket.price_yes / 100).toFixed(2) : "0.50"}`} color={side === "YES" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                   </button>
                   <button onClick={() => setSide("NO")}
                     style={side === "NO" && realMarket ? { backgroundColor: binNoColor(realMarket.id) } : undefined}
@@ -966,13 +970,13 @@ export default function MarketPage() {
                       side === "NO" ? "text-white" : `${t.inputBg} ${t.textMuted}`
                     }`}
                   >
-                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Down" : "No"} ${realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}e`} color={side === "NO" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
+                    <RollingNumber text={`${realMarket?.market_type === "BTC_5MIN" ? "Down" : "No"} ₦${realMarket ? (realMarket.price_no / 100).toFixed(2) : "0.50"}`} color={side === "NO" ? "#FFFFFF" : (theme === "dark" ? "#A1A1AA" : "#64748B")} />
                   </button>
                 </div>
               )}
 
               <div className="flex justify-between items-center mb-2">
-                <span className={`text-xs ${t.textMuted}`}>{amount}.00e cash</span>
+                <span className={`text-xs ${t.textMuted}`}>₦{amount}.00 cash</span>
                 <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
                   {editing ? "Done" : "Edit"}
                 </button>
@@ -1011,9 +1015,9 @@ export default function MarketPage() {
                             : `${t.inputBg} ${t.textPrimary}`
                         }`}
                       >
-                        <span className="text-sm font-bold">{a}e</span>
+                        <span className="text-sm font-bold">₦{a}</span>
                         <span className={`text-xs ${isActive ? (dynamicColor ? "text-white/80" : t.amountActiveSub) : "text-emerald-500"}`}>
-                          win {price > 0 ? (a / price).toFixed(0) : "0"}e
+                          win ₦{price > 0 ? (a / price).toFixed(0) : "0"}
                         </span>
                       </button>
                     );
@@ -1023,7 +1027,7 @@ export default function MarketPage() {
 
               <div className="text-center py-1 mb-1">
                 <span className={`text-xs ${t.textMuted}`}>Potential win if {realMarket?.prices ? selectedRealOutcome : side}: </span>
-                <span className={`text-sm font-bold ${t.accentText}`}>{payout}e</span>
+                <span className={`text-sm font-bold ${t.accentText}`}>₦{payout}</span>
                 <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
               </div>
 
@@ -1241,7 +1245,7 @@ export default function MarketPage() {
                   <p className="text-xs font-medium text-emerald-500 mb-2">YES Bids</p>
                   {[0.33, 0.32, 0.31, 0.30].map((p) => (
                     <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-emerald-500 font-medium">{p.toFixed(2)}e</span>
+                      <span className="text-emerald-500 font-medium">₦{p.toFixed(2)}</span>
                       <span>{Math.floor(Math.random() * 500 + 100)}</span>
                     </div>
                   ))}
@@ -1250,7 +1254,7 @@ export default function MarketPage() {
                   <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
                   {[0.67, 0.68, 0.69, 0.70].map((p) => (
                     <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-[#6B0D0D] font-medium">{p.toFixed(2)}e</span>
+                      <span className="text-[#6B0D0D] font-medium">₦{p.toFixed(2)}</span>
                       <span>{Math.floor(Math.random() * 500 + 100)}</span>
                     </div>
                   ))}
@@ -1496,7 +1500,7 @@ export default function MarketPage() {
                   : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Up {market.yesPrice.toFixed(2)}e
+                Up ₦{market.yesPrice.toFixed(2)}
               </button>
               <button onClick={() => setSide("NO")}
                 className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
@@ -1505,13 +1509,13 @@ export default function MarketPage() {
                   : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Down {market.noPrice.toFixed(2)}e
+                Down ₦{market.noPrice.toFixed(2)}
               </button>
             </div>
 
             {/* CASH + EDIT */}
             <div className="flex justify-between items-center mb-2">
-              <span className={`text-xs ${t.textMuted}`}>{amount}.00e cash</span>
+              <span className={`text-xs ${t.textMuted}`}>₦{amount}.00 cash</span>
               <button onClick={() => setEditing(!editing)} className={`text-xs ${t.accentText} font-medium cursor-pointer border-none bg-transparent`}>
                 {editing ? "Done" : "Edit"}
               </button>
@@ -1546,9 +1550,9 @@ export default function MarketPage() {
                         : `${t.inputBg} ${t.textPrimary}`
                     }`}
                   >
-                    <span className={`text-sm font-bold`}>{a}e</span>
+                    <span className={`text-sm font-bold`}>₦{a}</span>
                     <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-emerald-500"}`}>
-                      win {(a / price).toFixed(0)}e
+                      win ₦{(a / price).toFixed(0)}
                     </span>
                   </button>
                 ))}
@@ -1558,8 +1562,8 @@ export default function MarketPage() {
             {/* POTENTIAL WIN */}
             <div className="text-center py-1">
               <span className={`text-xs ${t.textMuted}`}>Potential win if {side}: </span>
-              <span className={`text-sm font-bold ${t.accentText}`}>{payout}e</span>
-              <span className={`text-xs ${t.textMuted}`}> · Fee: E{fee}</span>
+              <span className={`text-sm font-bold ${t.accentText}`}>₦{payout}</span>
+              <span className={`text-xs ${t.textMuted}`}> · Fee: ₦{fee}</span>
             </div>
           </div>
         </div>

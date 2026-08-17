@@ -664,6 +664,15 @@ const price = selectedFootballMarket
         return MUTED_COLORS[(startIdx + barColorSlot++) % MUTED_COLORS.length].bar;
       };
       const sportsPillColorFor = pillColorFor; // same system, used in the Sports branch below
+      // Hex equivalents of the same palette, same hash logic, for
+      // RollingNumber's color prop (which needs a literal color, not a
+      // Tailwind class) -- keeps the price text matching its pill button.
+      const MUTED_HEX = ["#C2410C", "#991B1B", "#1E40AF", "#047857", "#6B21A8", "#9F1239", "#155E75", "#B45309", "#0F766E", "#3730A3", "#4D7C0F", "#A21CAF"];
+      let hexColorSlot = 0;
+      const hexColorFor = (name: string) => {
+        if (name.toLowerCase() === "draw") return theme === "dark" ? "#A1A1AA" : "#64748B";
+        return MUTED_HEX[(startIdx + hexColorSlot++) % MUTED_HEX.length];
+      };
       return (
         <div
           key={m.id}
@@ -731,11 +740,11 @@ const price = selectedFootballMarket
 
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex gap-3">
-                  {outcomeEntries.map(([name, price], i) => (
+                  {outcomeEntries.map(([name, price]) => (
                     <div key={name} className="flex flex-col items-center">
                       <RollingNumber
                         text={`${Math.floor(price)}e`}
-                        color={i === 0 ? "#FF3131" : i === 1 ? (theme === "dark" ? "#00E676" : "#2563EB") : (theme === "dark" ? "#A1A1AA" : "#64748B")}
+                        color={hexColorFor(name)}
                         className="text-base font-bold"
                       />
                       <span className={`text-xs ${t.textMuted}`}>{name}</span>
@@ -754,7 +763,7 @@ const price = selectedFootballMarket
                     />
                   ))}
                   <div
-                    className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                    className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-black shadow-[0_0_8px_2px_rgba(0,0,0,0.5)]"}`}
                     style={{ left: `${outcomeEntries[0][1]}%`, transform: "translate(-50%, -50%)" }}
                   />
                 </div>
@@ -804,7 +813,7 @@ const price = selectedFootballMarket
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
+                          <RollingNumber text={`${Math.floor(m.price_yes ?? 0)}e`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
                           <span className={`text-xs ${t.textMuted}`}>YES</span>
                         </div>
                         <div className="flex flex-col items-center">
@@ -816,7 +825,7 @@ const price = selectedFootballMarket
                         <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${m.price_yes ?? 50}%` }} />
                         {/* floating glow marker at the boundary between YES and NO */}
                         <div
-                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                          className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-black shadow-[0_0_8px_2px_rgba(0,0,0,0.5)]"}`}
                           style={{ left: `${m.price_yes ?? 50}%`, transform: "translate(-50%, -50%)" }}
                         />
                       </div>
@@ -827,7 +836,7 @@ const price = selectedFootballMarket
                         onClick={(e) => { e.stopPropagation(); selectFootball("YES"); }}
                         onMouseEnter={() => setHoverSide("YES")}
                         onMouseLeave={() => setHoverSide(null)}
-                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+                        className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
                       >
                         Buy YES · {Math.floor(m.price_yes ?? 0)}e
                       </button>
@@ -874,7 +883,7 @@ const price = selectedFootballMarket
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowDepositModal(true)}
-                  className="text-xs px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none"
+                  className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer border-none ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}
                 >
                   Deposit
                 </button>
@@ -888,7 +897,7 @@ const price = selectedFootballMarket
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="text-sm px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white font-semibold transition-colors cursor-pointer border-none">
+                className={`text-sm px-4 py-1.5 rounded-md font-semibold transition-colors cursor-pointer border-none ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}>
                 Sign in
               </button>
             )}
@@ -1035,7 +1044,7 @@ const price = selectedFootballMarket
                         <circle cx="18" cy="18" r={r} fill="none" stroke={theme === "dark" ? "#2A2A2A" : "#E2E8F0"} strokeWidth="3" />
                         <circle
                           cx="18" cy="18" r={r} fill="none"
-                          stroke={theme === "dark" ? "#00E676" : "#2563EB"}
+                          stroke={theme === "dark" ? "#00E676" : "#000000"}
                           strokeWidth="3" strokeLinecap="round"
                           strokeDasharray={circumference}
                           strokeDashoffset={offset}
@@ -1059,7 +1068,7 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="text-base font-bold" />
+                      <RollingNumber text={`${Math.round(yes)}e`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
@@ -1070,7 +1079,7 @@ const price = selectedFootballMarket
                   <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
                     <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${yes}%` }} />
                     <div
-                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-blue-500 shadow-[0_0_8px_2px_rgba(37,99,235,0.7)]"}`}
+                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-black shadow-[0_0_8px_2px_rgba(0,0,0,0.5)]"}`}
                       style={{ left: `${yes}%`, transform: "translate(-50%, -50%)" }}
                     />
                   </div>
@@ -1079,7 +1088,7 @@ const price = selectedFootballMarket
                 <div className="flex gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
                   >
                     Buy Up · {Math.round(yes)}e
                   </button>
@@ -1366,7 +1375,7 @@ const price = selectedFootballMarket
                   color={
                     theme === "dark"
                       ? activeSide === "YES" ? "#00E676" : activeSide === "NO" ? "#FF3131" : "#00E676"
-                      : "#2563EB"
+                      : "#000000"
                   }
                 />
               </div>
@@ -1557,7 +1566,7 @@ const price = selectedFootballMarket
               </div>
 
               <p className={`text-xs ${t.textMuted} mb-1 line-clamp-1`}>{questionText}</p>
-              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? (theme === "dark" ? "text-[#00E676]" : "text-blue-600") : "text-[#FF3131]"}`}>{side}</p>
+              <p className={`text-sm font-semibold mb-4 ${side === "YES" ? (theme === "dark" ? "text-[#00E676]" : "text-black") : "text-[#FF3131]"}`}>{side}</p>
 
               <div className="flex items-center justify-center mb-4">
                 <span className={`text-5xl font-bold ${t.textMuted}`}>₦</span>
@@ -1575,7 +1584,7 @@ const price = selectedFootballMarket
                 <button
                   onClick={() => setSide("YES")}
                   className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
-                    side === "YES" ? (theme === "dark" ? "bg-[#00E676] text-black" : "bg-blue-600 text-white") : `${t.inputBg} ${t.textMuted}`
+                    side === "YES" ? (theme === "dark" ? "bg-[#00E676] text-black" : "bg-black text-white") : `${t.inputBg} ${t.textMuted}`
                   }`}
                 >
                   Yes
@@ -1593,7 +1602,7 @@ const price = selectedFootballMarket
               {amount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${payout.toFixed(2)}`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="font-bold text-sm" />
+                  <RollingNumber text={`₦${payout.toFixed(2)}`} color={theme === "dark" ? "#00E676" : "#000000"} className="font-bold text-sm" />
                 </p>
               )}
 
@@ -1620,7 +1629,7 @@ const price = selectedFootballMarket
                   // same placeholder behavior the desktop panel already has
                 }}
                 disabled={(selectedFootballMarket ? footballTradeStatus.loading : false) || amount <= 0}
-                className="w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+                className={`w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}
               >
                 {!isLoggedIn ? "Sign in to trade" : selectedFootballMarket && footballTradeStatus.loading ? "…" : "Trade"}
               </button>
@@ -1659,19 +1668,34 @@ const price = selectedFootballMarket
 
               {/* outcome switcher -- change which one you're buying before confirming */}
               <div className="flex flex-wrap gap-1.5 mb-4">
-                {Object.entries(outcomes).map(([name, p]) => (
-                  <button
-                    key={name}
-                    onClick={() => setSelectedMultiOutcome(name)}
-                    className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
-                      name === selectedMultiOutcome
-                        ? "bg-blue-500 border-blue-500 text-white font-medium"
-                        : `${t.inputBg} ${t.border} ${t.textMuted}`
-                    }`}
-                  >
-                    {name} · {p.toFixed(0)}e
-                  </button>
-                ))}
+                {(() => {
+                  const MUTED_HEX = ["#C2410C", "#991B1B", "#1E40AF", "#047857", "#6B21A8", "#9F1239", "#155E75", "#B45309", "#0F766E", "#3730A3", "#4D7C0F", "#A21CAF"];
+                  const hashIdx = (str: string, mod: number) => {
+                    let h = 0;
+                    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+                    return h % mod;
+                  };
+                  const outcomeNames = Object.keys(outcomes);
+                  const startIdx = hashIdx(outcomeNames[0], MUTED_HEX.length);
+                  return Object.entries(outcomes).map(([name, p], i) => {
+                    const color = name.toLowerCase() === "draw"
+                      ? (theme === "dark" ? "#71717A" : "#94A3B8")
+                      : MUTED_HEX[(startIdx + i) % MUTED_HEX.length];
+                    const isSelected = name === selectedMultiOutcome;
+                    return (
+                    <button
+                      key={name}
+                      onClick={() => setSelectedMultiOutcome(name)}
+                      style={isSelected ? { backgroundColor: color, borderColor: color } : undefined}
+                      className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                        isSelected ? "text-white font-medium" : `${t.inputBg} ${t.border} ${t.textMuted}`
+                      }`}
+                    >
+                      {name} · {Math.floor(p)}e
+                    </button>
+                    );
+                  });
+                })()}
               </div>
 
               <div className="flex items-center justify-center mb-4">
@@ -1689,7 +1713,7 @@ const price = selectedFootballMarket
               {multiAmount > 0 && (
                 <p className="text-center text-sm mb-4 flex items-center justify-center gap-1">
                   <span className={t.textMuted}>To win</span>
-                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color={theme === "dark" ? "#00E676" : "#2563EB"} className="font-bold text-sm" />
+                  <RollingNumber text={`₦${toWin.toLocaleString()}`} color={theme === "dark" ? "#00E676" : "#000000"} className="font-bold text-sm" />
                 </p>
               )}
 
@@ -1711,7 +1735,7 @@ const price = selectedFootballMarket
               <button
                 onClick={handleMultiOutcomeBuy}
                 disabled={multiTradeStatus.loading || multiAmount <= 0}
-                className="w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-50"
+                className={`w-full py-4 rounded-xl text-base font-bold border-none cursor-pointer disabled:opacity-50 ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}
               >
                 {!isLoggedIn ? "Sign in to trade" : multiTradeStatus.loading ? "…" : `Trade ${selectedMultiOutcome}`}
               </button>

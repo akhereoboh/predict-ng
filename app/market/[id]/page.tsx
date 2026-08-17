@@ -292,6 +292,7 @@ export default function MarketPage() {
   const anchorTopRef = useRef<ISeriesApi<"Line"> | null>(null);
   const anchorBottomRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [chartReady, setChartReady] = useState(false);
+  const [multiSeriesCreated, setMultiSeriesCreated] = useState(false);
 
   // Same hash-based color system used on the homepage cards, so a team's
   // line color here matches its color on the card you clicked in from.
@@ -396,14 +397,25 @@ export default function MarketPage() {
       });
       multiSeriesRef.current.set(name, s);
     });
+    setMultiSeriesCreated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartReady, realMarket?.prices]);
 
   // Load the market's real trade history into the chart once it's ready --
   // this is the "graphs and all that thing" showing how the odds actually
-  // moved as real people traded, using GET /markets/{id}/chart.
+  // moved as real people traded, using GET /markets/{id}/chart. Runs
+  // exactly ONCE per market (the hasLoadedHistoryRef guard), not on every
+  // 5-second poll -- it used to re-trigger on every poll because
+  // realMarket?.prices is a brand new object reference each time, which
+  // was re-fetching and re-calling setData() repeatedly, visibly
+  // "rebuilding" the chart instead of drawing history in once.
+  const hasLoadedHistoryRef = useRef(false);
   useEffect(() => {
     if (!isRealMarket || !chartReady) return;
+    if (!realMarket) return; // wait until we actually know the market type
+    if (realMarket.prices && !multiSeriesCreated) return; // multi-outcome: also wait for series to exist
+    if (hasLoadedHistoryRef.current) return;
+    hasLoadedHistoryRef.current = true;
     (async () => {
       try {
         const res = await fetch(`https://sireai.uk/pm-api/markets/${id}/chart`, { cache: "no-store" });
@@ -412,9 +424,6 @@ export default function MarketPage() {
         setChartTradeCount(rows.length);
 
         if (rows.length > 0 && rows[0].outcome_prices_after) {
-          // multi-outcome: wait for the per-outcome series to exist (the
-          // effect above creates them once realMarket.prices is known)
-          if (multiSeriesRef.current.size === 0) return;
           const pointsByOutcome = new Map<string, { time: UTCTimestamp; value: number }[]>();
           for (const r of rows) {
             if (!r.outcome_prices_after) continue;
@@ -451,9 +460,10 @@ export default function MarketPage() {
         if (points.length > 0) seriesRef.current?.setData(points);
       } catch {
         // chart just stays empty on a failed fetch -- not critical
+        hasLoadedHistoryRef.current = false; // allow retry on next relevant re-render
       }
     })();
-  }, [isRealMarket, chartReady, id, realMarket?.prices]);
+  }, [isRealMarket, chartReady, id, realMarket, multiSeriesCreated]);
 
   // Poll the live market state and keep the chart's latest point current.
   useEffect(() => {
@@ -484,13 +494,18 @@ export default function MarketPage() {
           const sorted = Object.entries(data.prices).sort((a, b) => a[1] - b[1]);
           const displayValue = new Map<string, number>();
           sorted.forEach(([name, price]) => displayValue.set(name, price));
-          for (let i = 1; i < sorted.length; i++) {
-            const prevName = sorted[i - 1][0];
-            const name = sorted[i][0];
-            const gap = displayValue.get(name)! - displayValue.get(prevName)!;
-            if (gap < MIN_VALUE_GAP) {
-              displayValue.set(name, displayValue.get(prevName)! + MIN_VALUE_GAP);
-            }
+          // If the whole cluster of values is tighter than the minimum
+          // required spread, redistribute them symmetrically around their
+          // shared average -- for exactly two tied outcomes at 50/50,
+          // this puts one at 40 and the other at 60, centered on 50, not
+          // pushed up from whichever happened to sort first.
+          const values = sorted.map(([, p]) => p);
+          const requiredSpan = MIN_VALUE_GAP * (sorted.length - 1);
+          const actualSpan = values[values.length - 1] - values[0];
+          if (actualSpan < requiredSpan) {
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+            const startValue = avg - requiredSpan / 2;
+            sorted.forEach(([name], i) => displayValue.set(name, startValue + i * MIN_VALUE_GAP));
           }
 
           const positions: { name: string; x: number; y: number }[] = [];

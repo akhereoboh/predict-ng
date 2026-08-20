@@ -589,8 +589,8 @@ const price = selectedFootballMarket
       return;
     }
     const market = selectedFootballMarket;
-    const priceFraction = (side === "YES" ? (market.price_yes ?? 50) : (market.price_no ?? 50)) / 100;
-    const estContracts = Math.max(1, Math.round(amount / priceFraction));
+    const contractPrice = side === "YES" ? (market.price_yes ?? 50) : (market.price_no ?? 50);
+    const estContracts = Math.max(1, Math.round(amount / contractPrice));
 
     setFootballTradeStatus({ loading: true, error: null, success: null });
     try {
@@ -634,8 +634,7 @@ const price = selectedFootballMarket
     const market = selectedMultiMarket;
     const outcome = selectedMultiOutcome;
     const price = market.outcomes![outcome] ?? 100 / Object.keys(market.outcomes!).length;
-    const priceFraction = price / 100;
-    const estContracts = Math.max(1, Math.round(multiAmount / priceFraction));
+    const estContracts = Math.max(1, Math.round(multiAmount / price));
 
     setMultiTradeStatus({ loading: true, error: null, success: null });
     try {
@@ -1830,8 +1829,7 @@ const price = selectedFootballMarket
       {multiSheetOpen && selectedMultiMarket && selectedMultiOutcome && selectedMultiMarket.outcomes && (() => {
         const outcomes = selectedMultiMarket.outcomes!;
         const price = outcomes[selectedMultiOutcome] ?? 100 / Object.keys(outcomes).length;
-        const priceFraction = price / 100;
-        const estContracts = priceFraction > 0 && multiAmount > 0 ? Math.max(1, Math.round(multiAmount / priceFraction)) : 0;
+        const estContracts = price > 0 && multiAmount > 0 ? Math.max(1, Math.round(multiAmount / price)) : 0;
         const toWin = estContracts * 100;
         return (
           <div className="fixed inset-0 z-50">

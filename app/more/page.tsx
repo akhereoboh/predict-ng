@@ -16,7 +16,7 @@ const ACCOUNT: Row[] = [
   { label: "Positions", d: "M9 17V9m4 8V5m4 12v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z", route: "/positions" },
   { label: "Watchlist", d: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
   { label: "Transaction History", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", route: "/history" },
-  { label: "Deposit & Withdraw", d: "M12 4v16m0 0l-4-4m4 4l4-4M4 4h16" },
+  { label: "Deposit & Withdraw", d: "M12 4v16m0 0l-4-4m4 4l4-4M4 4h16", route: "/deposit-withdraw" },
 ];
 
 const DISCOVERY: Row[] = [

@@ -317,8 +317,8 @@ function HomeContent() {
 
   const activeSide = hoverSide ?? side;
 const price = selectedFootballMarket
-    ? (side === "YES" ? (selectedFootballMarket.price_yes ?? 50) : (selectedFootballMarket.price_no ?? 50)) / 100
-    : side === "YES" ? selectedMarket.yesPrice : selectedMarket.noPrice;
+    ? (side === "YES" ? (selectedFootballMarket.price_yes ?? 50) : (selectedFootballMarket.price_no ?? 50))
+    : side === "YES" ? selectedMarket.yesPrice * 100 : selectedMarket.noPrice * 100;
   const contracts = (amount / price).toFixed(1);
   const fee = (amount * 0.02).toFixed(2);
   const payout = amount / price;

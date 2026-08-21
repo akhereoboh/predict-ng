@@ -30,17 +30,7 @@ type Withdrawal = {
 // shape hasn't been confirmed against Bachs' real docs yet, and this
 // avoids guessing field names for a money-moving flow. Swap this out
 // once List Banks is verified.
-const COMMON_BANKS = [
-  { name: "Access Bank", code: "044" },
-  { name: "GTBank", code: "058" },
-  { name: "Zenith Bank", code: "057" },
-  { name: "First Bank", code: "011" },
-  { name: "UBA", code: "033" },
-  { name: "Kuda Bank", code: "50211" },
-  { name: "Opay", code: "999992" },
-  { name: "Moniepoint", code: "50515" },
-  { name: "Palmpay", code: "999991" },
-];
+
 
 export default function DepositWithdraw() {
   const { theme, t, isLoggedIn, getValidToken, refreshPortfolio, cashNaira } = useTheme();
@@ -115,6 +105,27 @@ export default function DepositWithdraw() {
     }
   };
 
+
+  const [banks, setBanks] = useState<{ name: string; code: string }[]>([]);
+
+useEffect(() => {
+  const loadBanks = async () => {
+    try {
+      const token = await getValidToken();
+      if (!token) return;
+      const res = await fetch("https://sireai.uk/pm-api/me/banks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data: { name: string; code: string }[] = await res.json();
+      setBanks(data);
+    } catch {
+      // bank dropdown just stays empty -- user sees no options rather than a crash
+    }
+  };
+  if (isLoggedIn) loadBanks();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
   useEffect(() => {
     if (isLoggedIn) fetchBeneficiaries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -329,7 +340,7 @@ export default function DepositWithdraw() {
                     className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none`}
                   >
                     <option value="">Select bank</option>
-                    {COMMON_BANKS.map((b) => (
+                    {banks.map((b) => (
                       <option key={b.code} value={b.code}>{b.name}</option>
                     ))}
                   </select>

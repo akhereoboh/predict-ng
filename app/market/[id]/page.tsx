@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTheme } from "../../context/theme";
 import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import RollingNumber from "../../components/RollingNumber";
+import OrderBookTrade from "../../components/OrderBookTrade";
 
 const MARKETS = [
   {
@@ -266,6 +267,7 @@ export default function MarketPage() {
     prices?: Record<string, number>;  // present for multi-outcome markets instead of price_yes/price_no
     market_type: string;
     close_at: string | null;
+    trading_model: string; // "AMM" or "ORDER_BOOK"
   };
 
   const [realMarket, setRealMarket] = useState<RealMarket | null>(null);
@@ -842,43 +844,50 @@ export default function MarketPage() {
             </div>
           </div>
 
-          {/* ORDER BOOK */}
-          <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
-            <button onClick={() => setOrderBookOpen(!orderBookOpen)} className="w-full flex items-center justify-between px-4 py-3 cursor-pointer border-none bg-transparent text-left">
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${t.textPrimary}`}>Order Book</span>
-                <span className={`w-4 h-4 rounded-full ${t.accentBg} ${t.accentText} text-xs flex items-center justify-center font-bold`}>?</span>
-              </div>
-              <svg className={`w-4 h-4 ${t.textMuted} transition-transform ${orderBookOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {orderBookOpen && (
-              <div className="px-4 pb-4">
-                <p className={`text-xs ${t.textMuted} mb-3`}>View real-time buy & sell liquidity at different price offers</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs font-medium text-emerald-500 mb-2">YES Bids</p>
-                    {orderBookLiquidity.yes.map((row) => (
-                      <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                        <span className="text-emerald-500 font-medium">₦{row.p.toFixed(2)}</span>
-                        <span>{row.qty}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
-                    {orderBookLiquidity.no.map((row) => (
-                      <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                        <span className="text-[#6B0D0D] font-medium">₦{row.p.toFixed(2)}</span>
-                        <span>{row.qty}</span>
-                      </div>
-                    ))}
+          {/* ORDER BOOK -- real, live component for order-book markets;
+              AMM markets keep the old collapsible preview below it */}
+          {realMarket?.trading_model === "ORDER_BOOK" ? (
+            <div className="mb-4">
+              <OrderBookTrade marketId={realMarket.id} outcome={realMarket.prices ? (selectedRealOutcome ?? Object.keys(realMarket.prices)[0]) : "YES"} />
+            </div>
+          ) : (
+            <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
+              <button onClick={() => setOrderBookOpen(!orderBookOpen)} className="w-full flex items-center justify-between px-4 py-3 cursor-pointer border-none bg-transparent text-left">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-semibold ${t.textPrimary}`}>Order Book</span>
+                  <span className={`w-4 h-4 rounded-full ${t.accentBg} ${t.accentText} text-xs flex items-center justify-center font-bold`}>?</span>
+                </div>
+                <svg className={`w-4 h-4 ${t.textMuted} transition-transform ${orderBookOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {orderBookOpen && (
+                <div className="px-4 pb-4">
+                  <p className={`text-xs ${t.textMuted} mb-3`}>View real-time buy & sell liquidity at different price offers</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-emerald-500 mb-2">YES Bids</p>
+                      {orderBookLiquidity.yes.map((row) => (
+                        <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
+                          <span className="text-emerald-500 font-medium">₦{row.p.toFixed(2)}</span>
+                          <span>{row.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-[#6B0D0D] mb-2">NO Bids</p>
+                      {orderBookLiquidity.no.map((row) => (
+                        <div key={row.p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
+                          <span className="text-[#6B0D0D] font-medium">₦{row.p.toFixed(2)}</span>
+                          <span>{row.qty}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* MARKET RULES */}
           <div className={`${t.cardBg} border ${t.border} rounded-xl p-4 mb-4 shadow-sm`}>
@@ -929,6 +938,7 @@ export default function MarketPage() {
 
         {/* FIXED BOTTOM */}
         <div className="fixed bottom-0 left-0 right-0 z-20">
+          {realMarket?.trading_model !== "ORDER_BOOK" && (
           <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
             <div className="max-w-2xl mx-auto px-4 pt-3 pb-2">
               {realTradeStatus.error && <p className="text-xs text-red-500 mb-1 text-center">{realTradeStatus.error}</p>}
@@ -1054,6 +1064,7 @@ export default function MarketPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* BOTTOM NAV */}
           <nav className={`${t.bottomNav} border-t ${t.bottomNavBorder} flex items-center justify-around px-4 py-2`}>

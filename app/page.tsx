@@ -243,6 +243,8 @@ function HomeContent() {
     cycle_ends_at: string | null;
     volume_naira: number | null;
     trader_count: number | null;
+    open_price_usd: number | null;
+    current_price_usd: number | null;
   } | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const cardRefs = useRef<Map<string, typeof MARKETS[0]>>(new Map());
@@ -379,6 +381,8 @@ const price = selectedFootballMarket
           cycle_ends_at: data.cycle_ends_at,
           volume_naira: data.volume_naira,
           trader_count: data.trader_count,
+          open_price_usd: data.open_price_usd,
+          current_price_usd: data.current_price_usd,
         });
       } catch {
         // malformed message on one tick -- ignore, the next one will be fine
@@ -1211,6 +1215,11 @@ const price = selectedFootballMarket
                       <p className={`text-xs ${t.textMuted} mt-0.5`}>
                         ₦{vol.toLocaleString(undefined, { maximumFractionDigits: 0 })} vol · {traders} trader{traders === 1 ? "" : "s"}
                       </p>
+                      {btcLive?.open_price_usd != null && (
+                        <p className={`text-xs ${t.textMuted} mt-0.5`}>
+                          Target: ${btcLive.open_price_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </p>
+                      )}
                       <p className={`text-xs ${t.textMuted} mt-0.5 flex items-center gap-1.5`}>
                         <span className="relative flex h-1.5 w-1.5 shrink-0">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75"></span>

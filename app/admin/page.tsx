@@ -43,7 +43,7 @@ export default function AdminPage() {
   const [pagePassword, setPagePassword] = useState("");
   const [pagePasswordError, setPagePasswordError] = useState<string | null>(null);
   const [checkingPassword, setCheckingPassword] = useState(false);
-
+  const [tradingModel, setTradingModel] = useState<"AMM" | "ORDER_BOOK">("ORDER_BOOK");
   useEffect(() => {
     if (sessionStorage.getItem("eris_admin_unlocked") === "1") {
       const id = requestAnimationFrame(() => setPageUnlocked(true));
@@ -343,6 +343,7 @@ export default function AdminPage() {
             total_budget_naira: totalBudget,
             max_concurrent: maxConcurrent,
             league: league.trim() || null,
+            trading_model: tradingModel,
           }),
         });
         const data = await res.json();
@@ -411,6 +412,7 @@ export default function AdminPage() {
           total_budget_naira: totalBudget,
           max_concurrent: maxConcurrent,
           league: league.trim() || null,
+          trading_model: tradingModel,
         }),
       });
       const data = await res.json();
@@ -586,8 +588,28 @@ export default function AdminPage() {
               Named outcomes (2 or more)
             </button>
           </div>
+          <div className={`flex rounded-lg overflow-hidden border ${t.border} mb-4`}>
+            <button
+              onClick={() => setTradingModel("ORDER_BOOK")}
+              className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                tradingModel === "ORDER_BOOK" ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
+              }`}
+            >
+              Order Book
+            </button>
+            <button
+              onClick={() => setTradingModel("AMM")}
+              className={`flex-1 text-sm font-medium py-2 border-none cursor-pointer transition-colors ${
+                tradingModel === "AMM" ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
+              }`}
+            >
+              AMM (guaranteed liquidity, house-funded)
+            </button>
+          </div>
 
-          <label className={`text-xs ${t.textMuted} block mb-1`}>League (optional — e.g. LALIGA, ATP, ERE)</label>
+          <label className={`text-xs ${t.textMuted} block mb-1`}>
+            League (optional — e.g. LALIGA, ATP, ERE)
+          </label>
           <input
             type="text"
             placeholder="Leave blank if this market isn't part of a league"

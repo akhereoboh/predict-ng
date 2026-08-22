@@ -442,6 +442,7 @@ const price = selectedFootballMarket
     volume_naira: number;
     trader_count: number;
     closed: boolean;
+    trading_model: string; // "AMM" or "ORDER_BOOK"
   };
   type FootballTradeState = { loading: boolean; error: string | null; success: string | null };
 
@@ -677,6 +678,10 @@ const price = selectedFootballMarket
   const renderMarketCard = (m: FootballMarket) => {
     if (m.outcomes) {
       const selectOutcome = (outcomeName: string) => {
+        if (m.trading_model === "ORDER_BOOK") {
+          router.push(`/market/${m.id}`);
+          return;
+        }
         setSelectedMultiMarket(m);
         setSelectedMultiOutcome(outcomeName);
         setMultiAmount(0);
@@ -894,6 +899,10 @@ const price = selectedFootballMarket
 
     const isSelected = selectedFootballMarket?.id === m.id;
     const selectFootball = (pickSide: "YES" | "NO") => {
+      if (m.trading_model === "ORDER_BOOK") {
+        router.push(`/market/${m.id}`);
+        return;
+      }
       setSelectedFootballMarket(m);
       setSide(pickSide);
       setAmount(0);

@@ -805,6 +805,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {tradingModel === "AMM" && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
               <label className={`text-xs ${t.textMuted} block mb-1`}>Total budget for {effectiveCategory} (₦)</label>
@@ -825,6 +826,7 @@ export default function AdminPage() {
               />
             </div>
           </div>
+          )}
 
           <p className={`text-[11px] ${t.textMuted} mb-3`}>
             b (liquidity) and house funding are computed automatically per market from your shared budget — same

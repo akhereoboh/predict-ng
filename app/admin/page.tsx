@@ -426,8 +426,9 @@ export default function AdminPage() {
       setMultiCloseAt("");
       setOutcomeNames(["", ""]);
       fetchMarkets();
-    } catch {
-      setMultiCreateError("Network error — try again.");
+    } catch (err) {
+      console.error("[admin] create multi-outcome market failed:", err);
+      setMultiCreateError(`Network error — try again. (${err instanceof Error ? err.message : "unknown error"})`);
     } finally {
       setCreatingMulti(false);
     }

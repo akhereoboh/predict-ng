@@ -2167,7 +2167,7 @@ const price = selectedFootballMarket
                   />
                 </div>
                 <button
-                  onClick={async () => { const res = await signup(authEmail, authPassword); if (res.ok) { setSignupMessage("Check your email to confirm your account, then log in."); setAuthView("login"); setAuthEmail(""); setAuthPassword(""); setAuthPhone(""); } }}
+                  onClick={async () => { const res = await signup(authEmail, authPassword); if (res.ok) { setAuthView("login"); setAuthEmail(""); setAuthPassword(""); setAuthPhone(""); } }}
                   disabled={authLoading}
                   className={`w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-colors disabled:opacity-50 ${
                     theme === "dark" ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-zinc-800"

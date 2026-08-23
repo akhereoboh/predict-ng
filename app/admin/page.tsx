@@ -352,8 +352,9 @@ export default function AdminPage() {
           break; // stop the batch -- budget was likely exhausted partway through
         }
         results.push(data);
-      } catch {
-        firstError = `"${entry.question.trim()}": network error`;
+      } catch (err) {
+        console.error("[admin] create market failed:", err);
+        firstError = `"${entry.question.trim()}": network error (${err instanceof Error ? err.message : "unknown"})`;
         break;
       }
     }

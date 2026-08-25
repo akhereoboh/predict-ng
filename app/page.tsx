@@ -1066,15 +1066,15 @@ const price = selectedFootballMarket
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-4 text-xs">
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-center">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Portfolio</span>
-                <span className="font-bold text-emerald-500 text-sm">
+                <span className="font-bold text-emerald-500 text-xs">
                   {isLoggedIn ? (totalValueNaira != null ? `₦${totalValueNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-center">
                 <span className={`${t.textMuted} leading-none mb-0.5`}>Cash</span>
-                <span className="font-bold text-emerald-500 text-sm">
+                <span className="font-bold text-emerald-500 text-xs">
                   {isLoggedIn ? (cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…") : "₦0"}
                 </span>
               </div>

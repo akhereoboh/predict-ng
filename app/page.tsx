@@ -6,7 +6,11 @@ import RollingNumber from "./components/RollingNumber";
 import { useTheme } from "./context/theme";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { OUTCOME_COLORS, hashIndex } from "./lib/colors";
+import QuickBuyOrderBook from "./components/QuickBuyOrderBook";
 
+
+
+const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string } | null>(null);
 const MARKETS = [
   {
     id: "1",
@@ -704,9 +708,9 @@ const price = selectedFootballMarket
 
   const renderMarketCard = (m: FootballMarket) => {
     if (m.outcomes) {
-      const selectOutcome = (outcomeName: string) => {
+            const selectOutcome = (outcomeName: string) => {
         if (m.trading_model === "ORDER_BOOK") {
-          router.push(`/market/${m.id}`);
+          setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: Object.keys(m.outcomes!), initialOutcome: outcomeName });
           return;
         }
         setSelectedMultiMarket(m);
@@ -927,7 +931,7 @@ const price = selectedFootballMarket
     const isSelected = selectedFootballMarket?.id === m.id;
     const selectFootball = (pickSide: "YES" | "NO") => {
       if (m.trading_model === "ORDER_BOOK") {
-        router.push(`/market/${m.id}`);
+        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No" });
         return;
       }
       setSelectedFootballMarket(m);

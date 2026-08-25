@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/theme";
 import RollingNumber from "./RollingNumber";
+import { OUTCOME_COLORS, hashIndex, neutralHex } from "../lib/colors";
 
 type DepthLevel = { price: number; contracts: number };
 type Depth = { bids: DepthLevel[]; asks: DepthLevel[] };
@@ -17,22 +18,14 @@ type MyOrder = {
   created_at: string;
 };
 
-// Same hash-based color system already used throughout the app (market
-// cards, market/[id] page) -- reused here rather than inventing a new
-// palette, so an outcome's color stays consistent everywhere it appears.
-const MUTED_HEX = ["#C2410C", "#991B1B", "#1E40AF", "#047857", "#6B21A8", "#9F1239", "#155E75", "#B45309", "#0F766E", "#3730A3", "#4D7C0F", "#A21CAF"];
-const hashIndex = (str: string, mod: number) => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-  return h % mod;
-};
+
 
 export default function OrderBookTrade({ marketId, outcome = "YES" }: { marketId: string; outcome?: string }) {
   const { theme, t, isLoggedIn, getValidToken } = useTheme();
 
   const accentHex = outcome.toLowerCase() === "draw"
-    ? (theme === "dark" ? "#A1A1AA" : "#64748B")
-    : MUTED_HEX[hashIndex(`${marketId}-${outcome}`, MUTED_HEX.length)];
+    ? neutralHex(theme === "dark")
+    : OUTCOME_COLORS[hashIndex(`${marketId}-${outcome}`, OUTCOME_COLORS.length)].hex;
 
   const [depth, setDepth] = useState<Depth>({ bids: [], asks: [] });
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);

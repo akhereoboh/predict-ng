@@ -1045,9 +1045,9 @@ const price = selectedFootballMarket
       {/* NAV */}
       <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm`}>
 
-        {/* ROW 1 */}
+                {/* ROW 1 */}
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
-          <div onClick={() => router.push("/portfolio")} className="flex items-center gap-1.5 cursor-pointer">
+          <div onClick={() => router.push("/")} className="flex items-center gap-1.5 cursor-pointer">
             <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>
@@ -1066,21 +1066,24 @@ const price = selectedFootballMarket
                 </span>
               </div>
             </div>
+            {isLoggedIn && (
+              <button
+                onClick={() => router.push("/portfolio")}
+                title="Portfolio"
+                className={`w-8 h-8 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg} transition-colors`}
+              >
+                <svg className={`w-4 h-4 ${t.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
             {isLoggedIn ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowDepositModal(true)}
-                  className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer border-none ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}
-                >
-                  Deposit
-                </button>
-                <button
-                  onClick={logout}
-                  className={`text-xs px-3 py-1.5 rounded-md border ${t.border} ${t.textMuted} cursor-pointer bg-transparent`}
-                >
-                  Log out
-                </button>
-              </div>
+              <button
+                onClick={() => setShowDepositModal(true)}
+                className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer border-none ${theme === "dark" ? "bg-blue-500 hover:bg-blue-400" : "bg-black hover:bg-zinc-800"} text-white`}
+              >
+                Deposit
+              </button>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
@@ -1088,22 +1091,6 @@ const price = selectedFootballMarket
                 Sign in
               </button>
             )}
-            {/* THEME TOGGLE */}
-            <button
-              onClick={toggleTheme}
-              className={`w-8 h-8 rounded-full border ${t.border} flex items-center justify-center cursor-pointer ${t.navBg} transition-colors`}
-              title={theme === "light" ? "Switch to dark" : "Switch to light"}
-            >
-              {theme === "light" ? (
-                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
 

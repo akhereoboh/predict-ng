@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import RollingNumber from "./components/RollingNumber";
 import { useTheme } from "./context/theme";
 import { useState, useRef, useEffect, Suspense } from "react";
-
+import { OUTCOME_COLORS, hashIndex } from "./lib/colors";
 
 const MARKETS = [
   {
@@ -140,7 +140,7 @@ const MARKETS = [
 type CategoryEntry = { name: string; parent: string | null };
 
 function HomeContent() {
-  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, logout, getValidToken, refreshPortfolio } = useTheme();
+  const { theme, toggleTheme, t, isLoggedIn, login, signup, authError, authLoading, cashNaira, totalValueNaira, getValidToken, refreshPortfolio } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [categories, setCategories] = useState<CategoryEntry[]>([]);
@@ -230,6 +230,32 @@ function HomeContent() {
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{
+    markets: { id: string; question: string; market_type: string }[];
+    users: { id: string; display_name: string }[];
+  }>({ markets: [], users: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSearchResults({ markets: [], users: [] });
+      return;
+    }
+    setSearchLoading(true);
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://sireai.uk/pm-api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) setSearchResults(await res.json());
+      } catch {
+        // stale results just stay on screen -- not critical
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
+
   const [bubbles, setBubbles] = useState<{ id: number; marketId: string; outcome: string; amount: number; x: number }[]>([]);
   // Real trades across every market, polled independently of the price
   // list -- this is what tells us "someone just bought X on market Y",
@@ -352,6 +378,7 @@ const price = selectedFootballMarket
 
   const closeSearchModal = () => {
     setSearchModalOpen(false);
+    setSearchQuery("");
     setTimeout(() => setShowSearchModal(false), 300);
   };
 
@@ -913,28 +940,9 @@ const price = selectedFootballMarket
     // off the market's own id (not the literal "YES"/"NO" strings, which
     // never change and would give every binary market the identical
     // color pair). Only the BTC card keeps the fixed green/red now.
-    const MUTED_COLORS_BIN = [
-      { pill: "bg-orange-700 hover:bg-orange-600 text-white", bar: "bg-orange-700", hex: "#C2410C" },
-      { pill: "bg-red-800 hover:bg-red-700 text-white", bar: "bg-red-800", hex: "#991B1B" },
-      { pill: "bg-blue-800 hover:bg-blue-700 text-white", bar: "bg-blue-800", hex: "#1E40AF" },
-      { pill: "bg-emerald-700 hover:bg-emerald-600 text-white", bar: "bg-emerald-700", hex: "#047857" },
-      { pill: "bg-purple-800 hover:bg-purple-700 text-white", bar: "bg-purple-800", hex: "#6B21A8" },
-      { pill: "bg-rose-800 hover:bg-rose-700 text-white", bar: "bg-rose-800", hex: "#9F1239" },
-      { pill: "bg-cyan-800 hover:bg-cyan-700 text-white", bar: "bg-cyan-800", hex: "#155E75" },
-      { pill: "bg-amber-700 hover:bg-amber-600 text-white", bar: "bg-amber-700", hex: "#B45309" },
-      { pill: "bg-teal-800 hover:bg-teal-700 text-white", bar: "bg-teal-800", hex: "#0F766E" },
-      { pill: "bg-indigo-800 hover:bg-indigo-700 text-white", bar: "bg-indigo-800", hex: "#3730A3" },
-      { pill: "bg-lime-800 hover:bg-lime-700 text-white", bar: "bg-lime-800", hex: "#4D7C0F" },
-      { pill: "bg-fuchsia-800 hover:bg-fuchsia-700 text-white", bar: "bg-fuchsia-800", hex: "#A21CAF" },
-    ];
-    const hashIdxBin = (str: string, mod: number) => {
-      let h = 0;
-      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-      return h % mod;
-    };
-    const binStartIdx = hashIdxBin(m.id, MUTED_COLORS_BIN.length);
-    const yesColor = MUTED_COLORS_BIN[binStartIdx];
-    const noColor = MUTED_COLORS_BIN[(binStartIdx + 1) % MUTED_COLORS_BIN.length];
+    const binStartIdx = hashIndex(m.id, OUTCOME_COLORS.length);
+    const yesColor = OUTCOME_COLORS[binStartIdx];
+    const noColor = OUTCOME_COLORS[(binStartIdx + 1) % OUTCOME_COLORS.length];
     return (
       <div
                     key={m.id}
@@ -1670,59 +1678,113 @@ const price = selectedFootballMarket
               </svg>
               <input
                 autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={`bg-transparent text-base ${t.textPrimary} outline-none flex-1 placeholder:${t.textMuted}`}
-                placeholder="Search Eris markets..."
+                placeholder="Search markets or users..."
               />
             </div>
 
-            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>BROWSE</div>
-            <div className="flex flex-wrap gap-2.5 mb-7">
-              {[
-                { label: "New", d: "M12 4v16m8-8H4" },
-                { label: "Trending", d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
-                { label: "Popular", d: "M12 21C7 16 3 12.5 3 8.5 3 5.9 5 4 7.5 4 9 4 10.5 4.8 12 6.4 13.5 4.8 15 4 16.5 4 19 4 21 5.9 21 8.5 21 12.5 17 16 12 21z" },
-                { label: "Liquid", d: "M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z" },
-                { label: "Ending Soon", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-                { label: "Competitive", d: "M12 15a4 4 0 100-8 4 4 0 000 8zm0 0v6m-4-2.5l-2 2M16 18.5l2 2" },
-              ].map((b) => (
-                <button
-                  key={b.label}
-                  className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-full border ${t.border} ${t.textPrimary} font-medium cursor-pointer bg-transparent transition-colors hover:${t.inputBg}`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={b.d} />
-                  </svg>
-                  {b.label}
-                </button>
-              ))}
-            </div>
+            {searchQuery.trim().length >= 2 ? (
+              <>
+                {searchLoading && <p className={`text-sm ${t.textMuted} mb-4`}>Searching…</p>}
 
-            <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>TOPICS</div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Live Crypto", emoji: "📈", bg: "#3B1B1B" },
-                { label: "Politics", emoji: "🏛️", bg: "#3B2A1B" },
-                { label: "Middle East", emoji: "🌍", bg: "#1B2E3B" },
-                { label: "Crypto", emoji: "₿", bg: "#3B2E12" },
-                { label: "Sports", emoji: "🏀", bg: "#1B2E3B" },
-                { label: "Pop Culture", emoji: "🎭", bg: "#3B2A1B" },
-                { label: "Tech", emoji: "💻", bg: "#132E2B" },
-                { label: "AI", emoji: "🤖", bg: "#1B233B" },
-              ].map((topic) => (
-                <button
-                  key={topic.label}
-                  className={`flex items-center gap-3 ${t.inputBg} rounded-xl px-4 py-4 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
-                >
-                  <span
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
-                    style={{ backgroundColor: theme === "dark" ? topic.bg : "#F1F5F9" }}
-                  >
-                    {topic.emoji}
-                  </span>
-                  <span className={`text-base font-medium ${t.textPrimary}`}>{topic.label}</span>
-                </button>
-              ))}
-            </div>
+                {!searchLoading && searchResults.markets.length === 0 && searchResults.users.length === 0 && (
+                  <p className={`text-sm ${t.textMuted} mb-4`}>No matches for &quot;{searchQuery}&quot;.</p>
+                )}
+
+                {searchResults.markets.length > 0 && (
+                  <>
+                    <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>MARKETS</div>
+                    <div className="flex flex-col gap-2 mb-6">
+                      {searchResults.markets.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => { closeSearchModal(); router.push(`/market/${m.id}`); }}
+                          className={`flex items-center gap-3 ${t.inputBg} rounded-xl px-4 py-3 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
+                        >
+                          <svg className={`w-4 h-4 ${t.textMuted} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V9m4 8V5m4 12v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          <span className={`text-sm font-medium ${t.textPrimary}`}>{m.question}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {searchResults.users.length > 0 && (
+                  <>
+                    <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>USERS</div>
+                    <div className="flex flex-col gap-2">
+                      {searchResults.users.map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => { closeSearchModal(); router.push(`/profile/${u.id}`); }}
+                          className={`flex items-center gap-3 ${t.inputBg} rounded-xl px-4 py-3 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
+                        >
+                          <span className={`w-8 h-8 rounded-full ${t.accentBg} flex items-center justify-center text-xs font-bold ${t.accentText} shrink-0`}>
+                            {u.display_name.charAt(0).toUpperCase()}
+                          </span>
+                          <span className={`text-sm font-medium ${t.textPrimary}`}>{u.display_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>BROWSE</div>
+                <div className="flex flex-wrap gap-2.5 mb-7">
+                  {[
+                    { label: "New", d: "M12 4v16m8-8H4" },
+                    { label: "Trending", d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
+                    { label: "Popular", d: "M12 21C7 16 3 12.5 3 8.5 3 5.9 5 4 7.5 4 9 4 10.5 4.8 12 6.4 13.5 4.8 15 4 16.5 4 19 4 21 5.9 21 8.5 21 12.5 17 16 12 21z" },
+                    { label: "Liquid", d: "M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z" },
+                    { label: "Ending Soon", d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+                    { label: "Competitive", d: "M12 15a4 4 0 100-8 4 4 0 000 8zm0 0v6m-4-2.5l-2 2M16 18.5l2 2" },
+                  ].map((b) => (
+                    <button
+                      key={b.label}
+                      className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-full border ${t.border} ${t.textPrimary} font-medium cursor-pointer bg-transparent transition-colors hover:${t.inputBg}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={b.d} />
+                      </svg>
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={`text-xs font-semibold tracking-wide ${t.textMuted} mb-3`}>TOPICS</div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Live Crypto", emoji: "📈", bg: "#3B1B1B" },
+                    { label: "Politics", emoji: "🏛️", bg: "#3B2A1B" },
+                    { label: "Middle East", emoji: "🌍", bg: "#1B2E3B" },
+                    { label: "Crypto", emoji: "₿", bg: "#3B2E12" },
+                    { label: "Sports", emoji: "🏀", bg: "#1B2E3B" },
+                    { label: "Pop Culture", emoji: "🎭", bg: "#3B2A1B" },
+                    { label: "Tech", emoji: "💻", bg: "#132E2B" },
+                    { label: "AI", emoji: "🤖", bg: "#1B233B" },
+                  ].map((topic) => (
+                    <button
+                      key={topic.label}
+                      className={`flex items-center gap-3 ${t.inputBg} rounded-xl px-4 py-4 cursor-pointer border-none text-left transition-colors hover:${t.accentBg}`}
+                    >
+                      <span
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
+                        style={{ backgroundColor: theme === "dark" ? topic.bg : "#F1F5F9" }}
+                      >
+                        {topic.emoji}
+                      </span>
+                      <span className={`text-base font-medium ${t.textPrimary}`}>{topic.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

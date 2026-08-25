@@ -24,9 +24,10 @@ type CreateResult = {
   market_id: string;
   category: string;
   outcomes?: string[];
-  b: number;
-  house_funding_naira: number;
-  max_loss_naira: number;
+  trading_model?: string;
+  b?: number;
+  house_funding_naira?: number;
+  max_loss_naira?: number;
   close_at: string;
 };
 
@@ -842,7 +843,10 @@ export default function AdminPage() {
             <div className={`text-xs ${t.textMuted} mb-3 p-3 rounded-lg ${t.inputBg} flex flex-col gap-1.5`}>
               {createResults.map((r) => (
                 <p key={r.market_id}>
-                  <span className={`${t.textPrimary} font-medium`}>{r.market_id}</span> — b = {r.b} · house funding = ₦{r.house_funding_naira.toLocaleString()} · max loss = ₦{r.max_loss_naira.toLocaleString()}
+                  <span className={`${t.textPrimary} font-medium`}>{r.market_id}</span> —{" "}
+                  {r.trading_model === "ORDER_BOOK"
+                    ? "order-book market"
+                    : `b = ${r.b} · house funding = ₦${r.house_funding_naira?.toLocaleString()} · max loss = ₦${r.max_loss_naira?.toLocaleString()}`}
                 </p>
               ))}
             </div>
@@ -854,7 +858,10 @@ export default function AdminPage() {
               <p className={`${t.textPrimary} font-medium mb-1`}>
                 {multiCreateResult.market_id} — outcomes: {multiCreateResult.outcomes?.join(", ")}
               </p>
-              <p>b = {multiCreateResult.b} · house funding = ₦{multiCreateResult.house_funding_naira.toLocaleString()} · max loss = ₦{multiCreateResult.max_loss_naira.toLocaleString()}</p>
+                  <span className={`${t.textPrimary} font-medium`}>{r.market_id}</span> —{" "}
+                  {r.trading_model === "ORDER_BOOK"
+                    ? "order-book market"
+                    : `b = ${r.b} · house funding = ₦${r.house_funding_naira?.toLocaleString()} · max loss = ₦${r.max_loss_naira?.toLocaleString()}`}
             </div>
           )}
 

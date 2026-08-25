@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/theme";
+import { OUTCOME_COLORS, hashIndex, neutralHex } from "../lib/colors";
 
 const API_BASE = "https://sireai.uk/pm-api";
 
@@ -22,9 +23,21 @@ export default function QuickBuyOrderBook({ marketId, question, outcomes, initia
   const [priceLoading, setPriceLoading] = useState(true);
   const [status, setStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
 
-  // Pull the current best ask so "To win" reflects a real, live price --
-  // not a guess. No resting ask yet -> falls back to 50 (uninformed
-  // prior), same as a brand-new market with no trade history at all.
+  // Same hash math the market cards use: for binary Yes/No, color is
+  // seeded from the marketId itself (position 0 = first color, position
+  // 1 = next); for multi-outcome, seeded from the first outcome's name.
+  // Computed here from the same shared OUTCOME_COLORS array the cards
+  // read from -- so this sheet's colors can never drift out of sync with
+  // whatever card the user actually clicked.
+  const isBinary = outcomes.length === 2 && outcomes.every((o) => o.toLowerCase() === "yes" || o.toLowerCase() === "no");
+  const colorFor = (name: string): string => {
+    if (name.toLowerCase() === "draw") return neutralHex(theme === "dark");
+    const idx = outcomes.findIndex((o) => o === name);
+    const startIdx = hashIndex(isBinary ? marketId : outcomes[0], OUTCOME_COLORS.length);
+    return OUTCOME_COLORS[(startIdx + Math.max(idx, 0)) % OUTCOME_COLORS.length].hex;
+  };
+  const activeColor = colorFor(outcome);
+
   useEffect(() => {
     setPriceLoading(true);
     fetch(`${API_BASE}/markets/${marketId}/orderbook?outcome=${encodeURIComponent(outcome)}`)
@@ -99,17 +112,22 @@ export default function QuickBuyOrderBook({ marketId, question, outcomes, initia
 
         {outcomes.length > 1 && (
           <div className="flex gap-2 mb-4 flex-wrap">
-            {outcomes.map((o) => (
-              <button
-                key={o}
-                onClick={() => setOutcome(o)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full border-none cursor-pointer transition-colors ${
-                  outcome === o ? `${t.accent} text-white` : `${t.inputBg} ${t.textMuted}`
-                }`}
-              >
-                {o}
-              </button>
-            ))}
+            {outcomes.map((o) => {
+              const c = colorFor(o);
+              const isSelected = outcome === o;
+              return (
+                <button
+                  key={o}
+                  onClick={() => setOutcome(o)}
+                  style={isSelected ? { backgroundColor: c, borderColor: c } : undefined}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                    isSelected ? "text-white" : `${t.inputBg} ${t.border} ${t.textMuted}`
+                  }`}
+                >
+                  {o}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -154,7 +172,8 @@ export default function QuickBuyOrderBook({ marketId, question, outcomes, initia
         <button
           onClick={handleBuy}
           disabled={status.loading || priceLoading}
-          className={`w-full py-3.5 rounded-xl font-bold text-white text-base border-none cursor-pointer disabled:opacity-50 ${t.accent}`}
+          style={{ backgroundColor: activeColor }}
+          className="w-full py-3.5 rounded-xl font-bold text-white text-base border-none cursor-pointer disabled:opacity-50"
         >
           {status.loading ? "…" : `Buy ${outcome}`}
         </button>

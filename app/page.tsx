@@ -1994,8 +1994,18 @@ const price = selectedFootballMarket
               </button>
             </div>
           </div>
-        );
+                );
       })()}
+
+      {quickBuyOrderBook && (
+        <QuickBuyOrderBook
+          marketId={quickBuyOrderBook.marketId}
+          question={quickBuyOrderBook.question}
+          outcomes={quickBuyOrderBook.outcomes}
+          initialOutcome={quickBuyOrderBook.initialOutcome}
+          onClose={() => setQuickBuyOrderBook(null)}
+        />
+      )}
 
     {/* DEPOSIT MODAL */}
       {showDepositModal && (

@@ -462,5 +462,4 @@ export default function PortfolioPage() {
       </nav>
     </div>
   );
-  
 }

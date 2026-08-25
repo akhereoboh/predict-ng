@@ -143,9 +143,9 @@ export default function Football() {
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
               <>
-                <div className="flex flex-col items-end text-xs">
+                <div className="flex flex-col items-center text-xs">
                   <span className={t.textMuted}>Cash</span>
-                  <span className="font-bold text-emerald-500 text-sm">
+                  <span className="font-bold text-emerald-500 text-xs">
                     {cashNaira != null ? `₦${cashNaira.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "…"}
                   </span>
                 </div>

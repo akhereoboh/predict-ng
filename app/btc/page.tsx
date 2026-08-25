@@ -364,7 +364,7 @@ export default function BtcLive() {
           </svg>
           Back
         </button>
-        <div className="flex items-center gap-1.5">
+        <div onClick={() => router.push("/portfolio")} className="flex items-center gap-1.5 cursor-pointer">
           <span className={`w-5 h-5 rounded-md ${t.accent} flex items-center justify-center text-white text-xs font-black italic`}>E</span>
           <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
         </div>

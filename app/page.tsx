@@ -1047,7 +1047,7 @@ const price = selectedFootballMarket
 
         {/* ROW 1 */}
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
-          <div className="flex items-center gap-1.5">
+          <div onClick={() => router.push("/portfolio")} className="flex items-center gap-1.5 cursor-pointer">
             <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>

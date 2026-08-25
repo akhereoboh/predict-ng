@@ -93,7 +93,7 @@ export default function More() {
       {/* NAV */}
       <nav className={`sticky top-0 z-10 ${t.navBg} border-b ${t.border} shadow-sm`}>
         <div className="flex items-center justify-between px-3 md:px-6 h-12">
-          <div onClick={() => router.push("/")} className="flex items-center gap-1.5 cursor-pointer">
+          <div onClick={() => router.push("/portfolio")} className="flex items-center gap-1.5 cursor-pointer">
             <span className="w-6 h-6 rounded-md bg-[#CCFF00] flex items-center justify-center text-black text-xs font-black italic">E</span>
             <span className={`text-sm font-bold ${t.textPrimary}`}>Eris</span>
           </div>

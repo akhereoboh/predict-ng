@@ -6,6 +6,8 @@ import { useTheme } from "../../context/theme";
 import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import RollingNumber from "../../components/RollingNumber";
 import OrderBookTrade from "../../components/OrderBookTrade";
+import { OUTCOME_COLORS, hashIndex, neutralHex } from "../../lib/colors";
+
 
 const MARKETS = [
   {
@@ -307,23 +309,13 @@ export default function MarketPage() {
 
   // Same hash-based color system used on the homepage cards, so a team's
   // line color here matches its color on the card you clicked in from.
-  const MUTED_COLORS = ["#C2410C", "#991B1B", "#1E40AF", "#047857", "#6B21A8", "#9F1239", "#155E75", "#B45309", "#115E59", "#3730A3", "#3F6212", "#A21CAF"];
-  const hashIndex = (str: string, mod: number) => {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-    return h % mod;
-  };
   const colorForOutcome = (name: string, index: number, startName: string) => {
-    if (name.toLowerCase() === "draw") return theme === "dark" ? "#71717A" : "#94A3B8";
-    const startIdx = hashIndex(startName, MUTED_COLORS.length);
-    return MUTED_COLORS[(startIdx + index) % MUTED_COLORS.length];
+    if (name.toLowerCase() === "draw") return neutralHex(theme === "dark");
+    const startIdx = hashIndex(startName, OUTCOME_COLORS.length);
+    return OUTCOME_COLORS[(startIdx + index) % OUTCOME_COLORS.length].hex;
   };
-  // Same system for binary YES/NO markets, matching the homepage cards --
-  // hashed off the market's own id (not the literal "YES"/"NO" strings,
-  // which never change and would give every binary market the identical
-  // pair). Only the BTC page keeps fixed green/red.
-  const binYesColor = (marketId: string) => MUTED_COLORS[hashIndex(marketId, MUTED_COLORS.length)];
-  const binNoColor = (marketId: string) => MUTED_COLORS[(hashIndex(marketId, MUTED_COLORS.length) + 1) % MUTED_COLORS.length];
+  const binYesColor = (marketId: string) => OUTCOME_COLORS[hashIndex(marketId, OUTCOME_COLORS.length)].hex;
+  const binNoColor = (marketId: string) => OUTCOME_COLORS[(hashIndex(marketId, OUTCOME_COLORS.length) + 1) % OUTCOME_COLORS.length].hex;
 
   // Create the chart once, only when this is actually a real market.
   useEffect(() => {

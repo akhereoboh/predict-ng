@@ -858,10 +858,11 @@ export default function AdminPage() {
               <p className={`${t.textPrimary} font-medium mb-1`}>
                 {multiCreateResult.market_id} — outcomes: {multiCreateResult.outcomes?.join(", ")}
               </p>
-                  <span className={`${t.textPrimary} font-medium`}>{r.market_id}</span> —{" "}
-                  {r.trading_model === "ORDER_BOOK"
-                    ? "order-book market"
-                    : `b = ${r.b} · house funding = ₦${r.house_funding_naira?.toLocaleString()} · max loss = ₦${r.max_loss_naira?.toLocaleString()}`}
+              <p>
+                {multiCreateResult.trading_model === "ORDER_BOOK"
+                  ? "Order-book market — no AMM liquidity math applies."
+                  : `b = ${multiCreateResult.b} · house funding = ₦${multiCreateResult.house_funding_naira?.toLocaleString()} · max loss = ₦${multiCreateResult.max_loss_naira?.toLocaleString()}`}
+              </p>
             </div>
           )}
 

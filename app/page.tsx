@@ -10,7 +10,6 @@ import QuickBuyOrderBook from "./components/QuickBuyOrderBook";
 
 
 
-const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string } | null>(null);
 const MARKETS = [
   {
     id: "1",

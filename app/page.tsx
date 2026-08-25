@@ -233,6 +233,8 @@ function HomeContent() {
   const [authPhone, setAuthPhone] = useState("");
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string } | null>(null);
+
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{

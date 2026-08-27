@@ -1269,7 +1269,7 @@ const price = selectedFootballMarket
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <RollingNumber text={`₦${Math.round(yes)}`} color={theme === "dark" ? "#00E676" : "#000000"} className="text-base font-bold" />
+                      <RollingNumber text={`₦${Math.round(yes)}`} color="#00D1FF" className="text-base font-bold" />
                       <span className={`text-xs ${t.textMuted}`}>UP</span>
                     </div>
                     <div className="flex flex-col items-center">
@@ -1277,10 +1277,10 @@ const price = selectedFootballMarket
                       <span className={`text-xs ${t.textMuted}`}>DOWN</span>
                     </div>
                   </div>
-                  <div className={`relative flex-1 h-0.5 rounded-full overflow-visible ${theme === "dark" ? "bg-red-500" : "bg-[#A52020]"}`}>
-                    <div className={`h-full rounded-full transition-all duration-500 ${theme === "dark" ? "bg-[#00E676]" : t.accent}`} style={{ width: `${yes}%` }} />
+                  <div className="relative flex-1 h-0.5 rounded-full overflow-visible bg-[#FF3B5C]">
+                    <div className="h-full rounded-full transition-all duration-500 bg-[#00D1FF]" style={{ width: `${yes}%` }} />
                     <div
-                      className={`absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse ${theme === "dark" ? "bg-[#00E676] shadow-[0_0_8px_2px_rgba(0,230,118,0.7)]" : "bg-black shadow-[0_0_8px_2px_rgba(0,0,0,0.5)]"}`}
+                      className="absolute top-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500 animate-pulse bg-[#00D1FF] shadow-[0_0_8px_2px_rgba(0,209,255,0.7)]"
                       style={{ left: `${yes}%`, transform: "translate(-50%, -50%)" }}
                     />
                   </div>
@@ -1289,9 +1289,9 @@ const price = selectedFootballMarket
                 <div className="flex gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
-                    className={`flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors ${theme === "dark" ? "bg-[#00E676] hover:opacity-90 text-black" : "bg-black hover:bg-zinc-800 text-white"}`}
+                    className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-[#00D1FF] hover:opacity-90 text-black"
                   >
-                    <RollingNumber text={`Buy Up · ₦${Math.round(yes)}`} color={theme === "dark" ? "#000000" : "#FFFFFF"} />
+                    <RollingNumber text={`Buy Up · ₦${Math.round(yes)}`} color="#000000" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}

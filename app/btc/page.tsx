@@ -637,7 +637,7 @@ export default function BtcLive() {
                     }`}
                   >
                     <span className="text-sm font-bold">₦{a}</span>
-                    <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-green-500"}`}>
+                    <span className={`text-xs ${amount === a ? t.amountActiveSub : "text-[#00D1FF]"}`}>
                       win ₦{price > 0 ? (a / price).toFixed(0) : "0"}
                     </span>
                   </button>
@@ -654,7 +654,7 @@ export default function BtcLive() {
             {!isLoggedIn && (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className={`w-full h-11 rounded-xl text-sm font-bold border-none cursor-pointer mt-1 ${theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`}`}
+                className={`w-full h-11 rounded-xl text-sm font-bold border-none cursor-pointer mt-1 bg-[#00D1FF] text-black`}
               >
                 Sign in to trade
               </button>

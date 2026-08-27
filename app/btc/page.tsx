@@ -687,6 +687,15 @@ export default function BtcLive() {
       </div>
 
       {/* AUTH MODAL */}
+      {quickBuyOpen && live?.market_id && (
+        <QuickBuyOrderBook
+          marketId={live.market_id}
+          question="BTC Up or Down 5m"
+          outcomes={["Yes", "No"]}
+          initialOutcome={side === "YES" ? "Yes" : "No"}
+          onClose={() => setQuickBuyOpen(false)}
+        />
+      )}
       {showAuthModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"

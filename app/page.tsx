@@ -1288,13 +1288,13 @@ const price = selectedFootballMarket
 
                 <div className="flex gap-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
+                    onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "Yes" }); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-[#00D1FF] hover:opacity-90 text-black"
                   >
                     <RollingNumber text={`Buy Up · ₦${Math.round(yes)}`} color="#000000" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); router.push("/btc"); }}
+                                        onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "No" }); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                   >
                     <RollingNumber text={`Buy Down · ₦${Math.round(no)}`} color="#FFFFFF" />

@@ -504,6 +504,7 @@ export default function BtcLive() {
           {orderBookOpen && !live?.market_id && (
             <div className="px-4 pb-4">
               <p className={`text-xs ${t.textMuted}`}>Loading order book…</p>
+            </div>
           )}
         </div>
 

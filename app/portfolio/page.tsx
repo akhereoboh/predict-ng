@@ -15,6 +15,8 @@ type Holding = {
   trading_model: "AMM" | "ORDER_BOOK";
   outcome: string;
   contracts: number;
+  reserved_contracts: number;
+  available_contracts: number;
   current_value_naira: number;
   cost_naira: number;
   pnl_naira: number;
@@ -122,14 +124,14 @@ export default function PortfolioPage() {
 
   const openSell = (h: Holding) => {
     setSellTarget(h);
-    setSellContracts(h.contracts);
+    setSellContracts(h.available_contracts);
     setSellPrice(50);
     setSellStatus({ loading: false, error: null, success: null });
   };
 
   const handleSell = async () => {
     if (!sellTarget) return;
-    if (sellContracts <= 0 || sellContracts > sellTarget.contracts) {
+    if (sellContracts <= 0 || sellContracts > sellTarget.available_contracts) {
       setSellStatus({ loading: false, error: "Enter a valid amount to sell.", success: null });
       return;
     }
@@ -388,11 +390,14 @@ export default function PortfolioPage() {
             <p className={`text-sm font-semibold ${t.textPrimary} mb-1`}>Sell {sellTarget.outcome}</p>
             <p className={`text-xs ${t.textMuted} mb-4 line-clamp-2`}>{sellTarget.question}</p>
 
-            <p className={`text-xs ${t.textMuted} mb-1`}>Contracts (you hold {sellTarget.contracts.toFixed(2)})</p>
+            <p className={`text-xs ${t.textMuted} mb-1`}>
+              Contracts ({sellTarget.available_contracts.toFixed(2)} available to sell
+              {sellTarget.reserved_contracts > 0 ? ` · ${sellTarget.reserved_contracts.toFixed(2)} already reserved in another order` : ""})
+            </p>
             <input
               type="number"
               min={0}
-              max={sellTarget.contracts}
+              max={sellTarget.available_contracts}
               value={sellContracts || ""}
               onChange={(e) => setSellContracts(Number(e.target.value))}
               className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}

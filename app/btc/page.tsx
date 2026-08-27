@@ -34,7 +34,7 @@ type LiveData = {
 // transition, instead of the text just snapping to a new value. Non-digit
 // characters ($, comma, period) render statically alongside the reels.
 import RollingNumber from "../components/RollingNumber";
-
+import QuickBuyOrderBook from "../components/QuickBuyOrderBook";
 export default function BtcLive() {
   const { theme, toggleTheme, t, isLoggedIn, setIsLoggedIn } = useTheme();
   const router = useRouter();
@@ -248,7 +248,7 @@ export default function BtcLive() {
       if (seriesRef.current) {
         const isUpNow = data.open_price_usd != null && data.current_price_usd > data.open_price_usd;
         const isDownNow = data.open_price_usd != null && data.current_price_usd < data.open_price_usd;
-        const nowColor = isUpNow ? "#22C55E" : isDownNow ? "#EF4444" : theme === "dark" ? "#CCFF00" : "#3B82F6";
+        const nowColor = isUpNow ? "#00D1FF" : isDownNow ? "#FF3B5C" : "#00D1FF";
         seriesRef.current.applyOptions({ color: nowColor });
         currentColorRef.current = nowColor;
 
@@ -351,7 +351,7 @@ export default function BtcLive() {
   const fee = (amount * 0.02).toFixed(2);
   const volume = live?.volume_naira ?? 0;
   const traders = live?.trader_count ?? 0;
-
+  const [quickBuyOpen, setQuickBuyOpen] = useState(false);
   const cryptoBadge = theme === "dark" ? "bg-[#F7931A]/15 text-[#F7931A]" : "bg-orange-100 text-orange-700";
 
   return (
@@ -422,7 +422,7 @@ export default function BtcLive() {
             <div className={`text-xs ${t.textMuted} mb-1`}>Current Price</div>
             <div className="flex items-center gap-1.5 justify-end">
               {live?.open_price_usd != null && (
-                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-green-500" : isDown ? "text-red-500" : t.textMuted}`}>
+                <span className={`flex items-center gap-0.5 text-xs font-semibold ${isUp ? "text-[#00D1FF]" : isDown ? "text-[#FF3B5C]" : t.textMuted}`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={isDown ? "M19 14l-7 7m0 0l-7-7m7 7V3" : "M5 10l7-7m0 0l7 7m-7-7v18"} />
                   </svg>
@@ -585,22 +585,22 @@ export default function BtcLive() {
       <div className="fixed bottom-0 left-0 right-0 z-20">
         <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
           <div className="max-w-2xl mx-auto px-4 pt-3 pb-2">
-            <div className="flex gap-2 mb-2">
-              <button onClick={() => setSide("YES")}
+                        <div className="flex gap-2 mb-2">
+              <button onClick={() => { setSide("YES"); setQuickBuyOpen(true); }}
                 className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                  side === "YES" ? (theme === "dark" ? "bg-green-500 text-black" : `${t.accent} text-white`) : `${t.inputBg} ${t.textMuted}`
+                  side === "YES" ? "bg-[#00D1FF] text-black" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Up ₦{(yes / 100).toFixed(2)}
+                Up ₦{yes.toFixed(2)}
               </button>
-              <button onClick={() => setSide("NO")}
+              <button onClick={() => { setSide("NO"); setQuickBuyOpen(true); }}
                 className={`flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors ${
-                  side === "NO" ? (theme === "dark" ? "bg-red-500 text-white" : "bg-[#6B0D0D] text-white") : `${t.inputBg} ${t.textMuted}`
+                  side === "NO" ? "bg-[#FF3B5C] text-white" : `${t.inputBg} ${t.textMuted}`
                 }`}
               >
-                Down ₦{(no / 100).toFixed(2)}
+                Down ₦{no.toFixed(2)}
               </button>
-            </div>
+           </div>
 
             <div className="flex justify-between items-center mb-2">
               <span className={`text-xs ${t.textMuted}`}>₦{amount}.00 cash</span>
@@ -631,7 +631,7 @@ export default function BtcLive() {
                     className={`flex-1 rounded-xl py-3 cursor-pointer border-none transition-colors flex flex-col items-center gap-0.5 ${
                       amount === a
                         ? theme === "dark"
-                          ? side === "YES" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                          ? side === "YES" ? "bg-[#00D1FF] text-black" : "bg-[#FF3B5C] text-white"
                           : `${t.amountActive} ${t.amountActiveText}`
                         : `${t.inputBg} ${t.textPrimary}`
                     }`}

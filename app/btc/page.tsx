@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "../context/theme";
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, LineSeries, LineStyle, type IChartApi, type ISeriesApi, type IPriceLine, type UTCTimestamp } from "lightweight-charts";
-
+import OrderBookTrade from "../components/OrderBookTrade";
 const API_BASE = "https://sireai.uk/pm-api";
 const POLL_MS = 1000; // matches btc_stream.py's UPDATE_INTERVAL_SECONDS
 
@@ -496,30 +496,14 @@ export default function BtcLive() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          {orderBookOpen && (
+          {orderBookOpen && live?.market_id && (
             <div className="px-4 pb-4">
-              <p className={`text-xs ${t.textMuted} mb-3`}>View real-time buy & sell liquidity at different price offers</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs font-medium text-green-500 mb-2">UP Bids</p>
-                  {[0.48, 0.49, 0.50, 0.51].map((p, i) => (
-                    <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-green-500 font-medium">₦{p.toFixed(2)}</span>
-                      <span>{orderBookLiquidity.up[i]}</span>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-red-500 mb-2">DOWN Bids</p>
-                  {[0.49, 0.50, 0.51, 0.52].map((p, i) => (
-                    <div key={p} className={`flex justify-between text-xs ${t.textMuted} py-1 border-b ${t.borderLight}`}>
-                      <span className="text-red-500 font-medium">₦{p.toFixed(2)}</span>
-                      <span>{orderBookLiquidity.down[i]}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <OrderBookTrade marketId={live.market_id} outcome="YES" />
             </div>
+          )}
+          {orderBookOpen && !live?.market_id && (
+            <div className="px-4 pb-4">
+              <p className={`text-xs ${t.textMuted}`}>Loading order book…</p>
           )}
         </div>
 

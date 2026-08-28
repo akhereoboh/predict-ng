@@ -195,7 +195,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // silent -- portfolio just won't update this tick, next call will retry
     }
-  }, []);
+    }, []);
+
+  // Live push updates -- whenever cash/portfolio changes for ANY reason
+  // (another user's order matching against yours, the market-maker bot
+  // filling a resting order, a market resolving and paying out, a
+  // deposit webhook landing), not just after this browser's own action.
+  // Without this, a balance change with no local trigger would sit
+  // stale until a manual reload.
+  useEffect(() => {
+    if (!sessionRef.current?.accessToken) return;
+    const es = new EventSource(
+      `${API_BASE}/me/portfolio/stream?token=${encodeURIComponent(sessionRef.current.accessToken)}`
+    );
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setCashNaira(data.cash_naira);
+        setTotalValueNaira(data.total_value_naira);
+      } catch {
+        // malformed push -- ignore, next one corrects it
+      }
+    };
+    return () => es.close();
+  }, [cashNaira === null]);
 
   // On first load, restore a saved session if we have one, refreshing the
   // token first if it's already expired (browser could've been closed for

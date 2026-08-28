@@ -69,7 +69,8 @@ export default function PortfolioPage() {
   const [sellContracts, setSellContracts] = useState(0);
   const [sellPrice, setSellPrice] = useState(50); // only used for ORDER_BOOK sells
   const [sellStatus, setSellStatus] = useState<{ loading: boolean; error: string | null; success: string | null }>({ loading: false, error: null, success: null });
-
+  const [bestBid, setBestBid] = useState<number | null>(null);
+  const [bestBidLoading, setBestBidLoading] = useState(false);
   const fetchAll = async () => {
     const token = await getValidToken();
     if (!token) { setLoading(false); return; }
@@ -128,6 +129,20 @@ export default function PortfolioPage() {
     setSellPrice(50);
     setSellStatus({ loading: false, error: null, success: null });
   };
+
+  useEffect(() => {
+    if (!sellTarget || sellTarget.trading_model !== "ORDER_BOOK") return;
+    setBestBidLoading(true);
+    fetch(`${API_BASE}/markets/${sellTarget.market_id}/orderbook?outcome=${encodeURIComponent(sellTarget.outcome)}`)
+      .then((r) => r.json())
+      .then((depth) => {
+        const bid = depth.bids?.[0]?.price ?? null;
+        setBestBid(bid);
+        if (bid != null) setSellPrice(bid);
+      })
+      .catch(() => setBestBid(null))
+      .finally(() => setBestBidLoading(false));
+  }, [sellTarget]);
 
   const handleSell = async () => {
     if (!sellTarget) return;
@@ -401,15 +416,17 @@ export default function PortfolioPage() {
 
             {sellTarget.trading_model === "ORDER_BOOK" && (
               <>
-                <p className={`text-xs ${t.textMuted} mb-1`}>Sell price (₦, 1-99)</p>
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  value={sellPrice}
-                  onChange={(e) => setSellPrice(Number(e.target.value))}
-                  className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
-                />
+                {bestBidLoading && <p className={`text-xs ${t.textMuted} mb-3`}>Checking current price…</p>}
+                {!bestBidLoading && bestBid == null && (
+                  <p className="text-xs text-red-500 mb-3">
+                    No buyers right now for this outcome -- can't sell at market price this moment.
+                  </p>
+                )}
+                {!bestBidLoading && bestBid != null && (
+                  <p className={`text-xs ${t.textMuted} mb-3`}>
+                    Selling at current market price: <span className={`font-semibold ${t.textPrimary}`}>₦{bestBid}</span>
+                  </p>
+                )}
               </>
             )}
 
@@ -418,7 +435,7 @@ export default function PortfolioPage() {
 
             <button
               onClick={handleSell}
-              disabled={sellStatus.loading}
+              disabled={sellStatus.loading || (sellTarget.trading_model === "ORDER_BOOK" && bestBid == null)}
               className="w-full py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer disabled:opacity-50 bg-red-500 hover:bg-red-400 text-white mb-2"
             >
               {sellStatus.loading ? "…" : "Confirm sell"}

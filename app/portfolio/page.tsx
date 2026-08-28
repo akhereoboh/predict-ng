@@ -155,6 +155,28 @@ export default function PortfolioPage() {
       const token = await getValidToken();
       if (!token) return;
 
+      // Re-check right before submitting -- sellTarget was captured when
+      // the modal opened and can go stale (another order filling,
+      // another tab acting on the same position) by the time the user
+      // actually confirms.
+      const freshRes = await fetch(`${API_BASE}/me/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
+      if (freshRes.ok) {
+        const freshPortfolio = await freshRes.json();
+        const freshHolding = freshPortfolio.holdings?.find(
+          (h: Holding) => h.market_id === sellTarget.market_id && h.outcome === sellTarget.outcome
+        );
+        const freshAvailable = freshHolding?.available_contracts ?? 0;
+        if (sellContracts > freshAvailable) {
+          setSellStatus({
+            loading: false,
+            error: `Your available amount changed -- only ${freshAvailable.toFixed(2)} contracts available now, not ${sellTarget.contracts.toFixed(2)}.`,
+            success: null,
+          });
+          setSellContracts(freshAvailable);
+          return;
+        }
+      }
+
       if (sellTarget.trading_model === "ORDER_BOOK") {
         if (sellPrice <= 0 || sellPrice >= 100) {
           setSellStatus({ loading: false, error: "Enter a valid price (1-99).", success: null });

@@ -390,18 +390,14 @@ export default function PortfolioPage() {
             <p className={`text-sm font-semibold ${t.textPrimary} mb-1`}>Sell {sellTarget.outcome}</p>
             <p className={`text-xs ${t.textMuted} mb-4 line-clamp-2`}>{sellTarget.question}</p>
 
-            <p className={`text-xs ${t.textMuted} mb-1`}>
-              Contracts ({sellTarget.available_contracts.toFixed(2)} available to sell
-              {sellTarget.reserved_contracts > 0 ? ` · ${sellTarget.reserved_contracts.toFixed(2)} already reserved in another order` : ""})
+            <p className={`text-sm ${t.textPrimary} mb-1`}>
+              Selling all <span className="font-semibold">{sellTarget.available_contracts.toFixed(2)}</span> contracts
             </p>
-            <input
-              type="number"
-              min={0}
-              max={sellTarget.available_contracts}
-              value={sellContracts || ""}
-              onChange={(e) => setSellContracts(Number(e.target.value))}
-              className={`w-full px-3 py-2.5 rounded-xl text-sm border ${t.border} ${t.inputBg} ${t.textPrimary} outline-none mb-3`}
-            />
+            {sellTarget.reserved_contracts > 0 && (
+              <p className={`text-xs ${t.textMuted} mb-3`}>
+                ({sellTarget.reserved_contracts.toFixed(2)} already reserved in another order, not included)
+              </p>
+            )}
 
             {sellTarget.trading_model === "ORDER_BOOK" && (
               <>

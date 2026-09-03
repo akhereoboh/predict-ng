@@ -711,7 +711,7 @@ const price = selectedFootballMarket
     if (m.outcomes) {
             const selectOutcome = (outcomeName: string) => {
         if (m.trading_model === "ORDER_BOOK") {
-          setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: Object.keys(m.outcomes!), initialOutcome: outcomeName, colors: Object.fromEntries(Object.keys(m.outcomes!).map((name, i) => [name, pillColorFor(name, i).hex])) });
+          setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: Object.keys(m.outcomes!), initialOutcome: outcomeName, colors: Object.fromEntries(Object.keys(m.outcomes!).map((name) => [name, bubbleColorFor(name)])) });
           return;
         }
         setSelectedMultiMarket(m);
@@ -932,7 +932,7 @@ const price = selectedFootballMarket
     const isSelected = selectedFootballMarket?.id === m.id;
     const selectFootball = (pickSide: "YES" | "NO") => {
       if (m.trading_model === "ORDER_BOOK") {
-        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No", colors: { Yes: yesColor.hex, No: noColor.hex } });
+        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No", colors: {} });
         return;
       }
       setSelectedFootballMarket(m);

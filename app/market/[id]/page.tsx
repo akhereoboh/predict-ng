@@ -1769,6 +1769,16 @@ export default function MarketPage() {
           </div>
         </div>
       )}
+      {quickBuyOrderBook && (
+        <QuickBuyOrderBook
+          marketId={quickBuyOrderBook.marketId}
+          question={quickBuyOrderBook.question}
+          outcomes={quickBuyOrderBook.outcomes}
+          initialOutcome={quickBuyOrderBook.initialOutcome}
+          colors={quickBuyOrderBook.colors}
+          onClose={() => setQuickBuyOrderBook(null)}
+        />
+      )}
     </div>
   );
 }

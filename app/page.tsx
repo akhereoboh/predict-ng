@@ -930,9 +930,16 @@ const price = selectedFootballMarket
     }
 
     const isSelected = selectedFootballMarket?.id === m.id;
+    // Same dynamic, muted color system as multi-outcome markets -- hashed
+    // off the market's own id (not the literal "YES"/"NO" strings, which
+    // never change and would give every binary market the identical
+    // color pair). Only the BTC card keeps the fixed green/red now.
+    const binStartIdx = hashIndex(m.id, OUTCOME_COLORS.length);
+    const yesColor = OUTCOME_COLORS[binStartIdx];
+    const noColor = OUTCOME_COLORS[(binStartIdx + 1) % OUTCOME_COLORS.length];
     const selectFootball = (pickSide: "YES" | "NO") => {
       if (m.trading_model === "ORDER_BOOK") {
-        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No", colors: {} });
+        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No", colors: { Yes: yesColor.hex, No: noColor.hex } });
         return;
       }
       setSelectedFootballMarket(m);
@@ -941,13 +948,6 @@ const price = selectedFootballMarket
       setFootballTradeStatus({ loading: false, error: null, success: null });
       setMobileSheetOpen(true);
     };
-    // Same dynamic, muted color system as multi-outcome markets -- hashed
-    // off the market's own id (not the literal "YES"/"NO" strings, which
-    // never change and would give every binary market the identical
-    // color pair). Only the BTC card keeps the fixed green/red now.
-    const binStartIdx = hashIndex(m.id, OUTCOME_COLORS.length);
-    const yesColor = OUTCOME_COLORS[binStartIdx];
-    const noColor = OUTCOME_COLORS[(binStartIdx + 1) % OUTCOME_COLORS.length];
     return (
       <div
                     key={m.id}

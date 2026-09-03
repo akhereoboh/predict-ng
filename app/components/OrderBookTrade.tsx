@@ -20,7 +20,7 @@ type MyOrder = {
 
 
 
-export default function OrderBookTrade({ marketId, outcome = "YES" }: { marketId: string; outcome?: string }) {
+export default function OrderBookTrade({ marketId, outcome = "YES", hideTradeForm = false }: { marketId: string; outcome?: string; hideTradeForm?: boolean }) {
   const { theme, t, isLoggedIn, getValidToken } = useTheme();
 
   const accentHex = outcome.toLowerCase() === "draw"

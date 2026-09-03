@@ -7,7 +7,7 @@ import { createChart, ColorType, LineSeries, type IChartApi, type ISeriesApi, ty
 import RollingNumber from "../../components/RollingNumber";
 import OrderBookTrade from "../../components/OrderBookTrade";
 import { OUTCOME_COLORS, hashIndex, neutralHex } from "../../lib/colors";
-
+import QuickBuyOrderBook from "../../components/QuickBuyOrderBook";
 
 const MARKETS = [
   {
@@ -250,6 +250,7 @@ export default function MarketPage() {
   const [authUsername, setAuthUsername] = useState("");
   const [authPhone, setAuthPhone] = useState("");
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
+  const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string; colors: Record<string, string> } | null>(null);
 
   // --- REAL BACKEND MARKETS (e.g. football matches) ---
   // The static MARKETS array above is mock data for the original design

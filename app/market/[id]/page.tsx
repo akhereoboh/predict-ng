@@ -839,8 +839,21 @@ export default function MarketPage() {
           {/* ORDER BOOK -- real, live component for order-book markets;
               AMM markets keep the old collapsible preview below it */}
           {realMarket?.trading_model === "ORDER_BOOK" ? (
-            <div className="mb-4">
-              <OrderBookTrade marketId={realMarket.id} outcome={realMarket.prices ? (selectedRealOutcome ?? Object.keys(realMarket.prices)[0]) : "YES"} />
+            <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
+              <button onClick={() => setOrderBookOpen(!orderBookOpen)} className="w-full flex items-center justify-between px-4 py-3 cursor-pointer border-none bg-transparent text-left">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-semibold ${t.textPrimary}`}>Order Book</span>
+                  <span className={`w-4 h-4 rounded-full ${t.accentBg} ${t.accentText} text-xs flex items-center justify-center font-bold`}>?</span>
+                </div>
+                <svg className={`w-4 h-4 ${t.textMuted} transition-transform ${orderBookOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {orderBookOpen && (
+                <div className="px-4 pb-4">
+                  <OrderBookTrade marketId={realMarket.id} outcome={realMarket.prices ? (selectedRealOutcome ?? Object.keys(realMarket.prices)[0]) : "YES"} hideTradeForm />
+                </div>
+              )}
             </div>
           ) : (
             <div className={`${t.cardBg} border ${t.border} rounded-xl mb-4 shadow-sm overflow-hidden`}>
@@ -930,6 +943,60 @@ export default function MarketPage() {
 
         {/* FIXED BOTTOM */}
         <div className="fixed bottom-0 left-0 right-0 z-20">
+                    {realMarket?.trading_model === "ORDER_BOOK" && (
+            <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
+              <div className="max-w-2xl mx-auto px-4 py-3">
+                <div className="flex gap-2">
+                  {realMarket.prices ? (
+                    Object.entries(realMarket.prices).map(([name, p], i) => {
+                      const outcomeNames = Object.keys(realMarket.prices!);
+                      const color = colorForOutcome(name, i, outcomeNames[0]);
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => setQuickBuyOrderBook({
+                            marketId: realMarket.id, question: realMarket.question,
+                            outcomes: outcomeNames, initialOutcome: name,
+                            colors: Object.fromEntries(outcomeNames.map((n, j) => [n, colorForOutcome(n, j, outcomeNames[0])])),
+                          })}
+                          style={{ backgroundColor: color }}
+                          className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white whitespace-nowrap px-2"
+                        >
+                          {name} ₦{p.toFixed(2)}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setQuickBuyOrderBook({
+                          marketId: realMarket!.id, question: realMarket!.question,
+                          outcomes: ["Yes", "No"], initialOutcome: "Yes",
+                          colors: { Yes: binYesColor(realMarket!.id), No: binNoColor(realMarket!.id) },
+                        })}
+                        style={{ backgroundColor: binYesColor(realMarket!.id) }}
+                        className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white"
+                      >
+                        Yes ₦{realMarket!.price_yes?.toFixed(2)}
+                      </button>
+                      <button
+                        onClick={() => setQuickBuyOrderBook({
+                          marketId: realMarket!.id, question: realMarket!.question,
+                          outcomes: ["Yes", "No"], initialOutcome: "No",
+                          colors: { Yes: binYesColor(realMarket!.id), No: binNoColor(realMarket!.id) },
+                        })}
+                        style={{ backgroundColor: binNoColor(realMarket!.id) }}
+                        className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white"
+                      >
+                        No ₦{realMarket!.price_no?.toFixed(2)}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {realMarket?.trading_model !== "ORDER_BOOK" && (
           <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
             <div className="max-w-2xl mx-auto px-4 pt-3 pb-2">

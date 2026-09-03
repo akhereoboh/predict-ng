@@ -8,6 +8,9 @@ import RollingNumber from "../../components/RollingNumber";
 import OrderBookTrade from "../../components/OrderBookTrade";
 import { OUTCOME_COLORS, hashIndex, neutralHex } from "../../lib/colors";
 import QuickBuyOrderBook from "../../components/QuickBuyOrderBook";
+import InlineQuickBuy from "../../components/InlineQuickBuy";
+
+
 
 const MARKETS = [
   {
@@ -944,58 +947,20 @@ export default function MarketPage() {
 
         {/* FIXED BOTTOM */}
         <div className="fixed bottom-0 left-0 right-0 z-20">
-                    {realMarket?.trading_model === "ORDER_BOOK" && (
-            <div className={`${t.navBg} border-t ${t.border} shadow-lg`}>
-              <div className="max-w-2xl mx-auto px-4 py-3">
-                <div className="flex gap-2">
-                  {realMarket.prices ? (
-                    Object.entries(realMarket.prices).map(([name, p], i) => {
-                      const outcomeNames = Object.keys(realMarket.prices!);
-                      const color = colorForOutcome(name, i, outcomeNames[0]);
-                      return (
-                        <button
-                          key={name}
-                          onClick={() => setQuickBuyOrderBook({
-                            marketId: realMarket.id, question: realMarket.question,
-                            outcomes: outcomeNames, initialOutcome: name,
-                            colors: Object.fromEntries(outcomeNames.map((n, j) => [n, colorForOutcome(n, j, outcomeNames[0])])),
-                          })}
-                          style={{ backgroundColor: color }}
-                          className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white whitespace-nowrap px-2"
-                        >
-                          {name} ₦{p.toFixed(2)}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setQuickBuyOrderBook({
-                          marketId: realMarket!.id, question: realMarket!.question,
-                          outcomes: ["Yes", "No"], initialOutcome: "Yes",
-                          colors: { Yes: binYesColor(realMarket!.id), No: binNoColor(realMarket!.id) },
-                        })}
-                        style={{ backgroundColor: binYesColor(realMarket!.id) }}
-                        className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white"
-                      >
-                        Yes ₦{realMarket!.price_yes?.toFixed(2)}
-                      </button>
-                      <button
-                        onClick={() => setQuickBuyOrderBook({
-                          marketId: realMarket!.id, question: realMarket!.question,
-                          outcomes: ["Yes", "No"], initialOutcome: "No",
-                          colors: { Yes: binYesColor(realMarket!.id), No: binNoColor(realMarket!.id) },
-                        })}
-                        style={{ backgroundColor: binNoColor(realMarket!.id) }}
-                        className="flex-1 h-12 rounded-xl text-sm font-bold border-none cursor-pointer text-white"
-                      >
-                        No ₦{realMarket!.price_no?.toFixed(2)}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+                              {realMarket?.trading_model === "ORDER_BOOK" && (
+            realMarket.prices ? (
+              <InlineQuickBuy
+                marketId={realMarket.id}
+                outcomes={Object.keys(realMarket.prices)}
+                colors={Object.fromEntries(Object.keys(realMarket.prices).map((n, j) => [n, colorForOutcome(n, j, Object.keys(realMarket.prices!)[0])]))}
+              />
+            ) : (
+              <InlineQuickBuy
+                marketId={realMarket.id}
+                outcomes={["Yes", "No"]}
+                colors={{ Yes: binYesColor(realMarket.id), No: binNoColor(realMarket.id) }}
+              />
+            )
           )}
           
           {realMarket?.trading_model !== "ORDER_BOOK" && (

@@ -9,12 +9,13 @@ const API_BASE = "https://sireai.uk/pm-api";
 type Props = {
   marketId: string;
   question: string;
-  outcomes: string[]; // ["Yes", "No"] for binary, or named outcomes for multi
+  outcomes: string[];
   initialOutcome: string;
+  colors: Record<string, string>; // exact colors the card that opened this already used, e.g. { Yes: "#00D1FF", No: "#FF3B5C" }
   onClose: () => void;
 };
 
-export default function QuickBuyOrderBook({ marketId, question, outcomes, initialOutcome, onClose }: Props) {
+export default function QuickBuyOrderBook({ marketId, question, outcomes, initialOutcome, colors, onClose }: Props) {
   const { theme, t, isLoggedIn, getValidToken, refreshPortfolio } = useTheme();
 
   const [outcome, setOutcome] = useState(initialOutcome);
@@ -29,13 +30,7 @@ export default function QuickBuyOrderBook({ marketId, question, outcomes, initia
   // Computed here from the same shared OUTCOME_COLORS array the cards
   // read from -- so this sheet's colors can never drift out of sync with
   // whatever card the user actually clicked.
-  const isBinary = outcomes.length === 2 && outcomes.every((o) => o.toLowerCase() === "yes" || o.toLowerCase() === "no");
-  const colorFor = (name: string): string => {
-    if (name.toLowerCase() === "draw") return neutralHex(theme === "dark");
-    const idx = outcomes.findIndex((o) => o === name);
-    const startIdx = hashIndex(isBinary ? marketId : outcomes[0], OUTCOME_COLORS.length);
-    return OUTCOME_COLORS[(startIdx + Math.max(idx, 0)) % OUTCOME_COLORS.length].hex;
-  };
+  const colorFor = (name: string): string => colors[name] ?? "#666666";
   const activeColor = colorFor(outcome);
 
   useEffect(() => {

@@ -232,7 +232,7 @@ function HomeContent() {
   const [authPhone, setAuthPhone] = useState("");
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string } | null>(null);
+  const [quickBuyOrderBook, setQuickBuyOrderBook] = useState<{ marketId: string; question: string; outcomes: string[]; initialOutcome: string; colors: Record<string, string> } | null>(null);
 
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -711,7 +711,7 @@ const price = selectedFootballMarket
     if (m.outcomes) {
             const selectOutcome = (outcomeName: string) => {
         if (m.trading_model === "ORDER_BOOK") {
-          setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: Object.keys(m.outcomes!), initialOutcome: outcomeName });
+          setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: Object.keys(m.outcomes!), initialOutcome: outcomeName, colors: Object.fromEntries(Object.keys(m.outcomes!).map((name, i) => [name, pillColorFor(name, i).hex])) });
           return;
         }
         setSelectedMultiMarket(m);
@@ -932,7 +932,7 @@ const price = selectedFootballMarket
     const isSelected = selectedFootballMarket?.id === m.id;
     const selectFootball = (pickSide: "YES" | "NO") => {
       if (m.trading_model === "ORDER_BOOK") {
-        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No" });
+        setQuickBuyOrderBook({ marketId: m.id, question: m.question, outcomes: ["Yes", "No"], initialOutcome: pickSide === "YES" ? "Yes" : "No", colors: { Yes: yesColor.hex, No: noColor.hex } });
         return;
       }
       setSelectedFootballMarket(m);
@@ -1288,13 +1288,13 @@ const price = selectedFootballMarket
 
                 <div className="flex gap-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "Yes" }); }}
+                    onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "Yes", colors: { Yes: "#00D1FF", No: "#FF3B5C" } }); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-[#00D1FF] hover:opacity-90 text-black"
                   >
                     <RollingNumber text={`Buy Up · ₦${Math.round(yes)}`} color="#000000" />
                   </button>
                   <button
-                                        onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "No" }); }}
+                                        onClick={(e) => { e.stopPropagation(); const mid = btcLive?.market_id; if (mid) setQuickBuyOrderBook({ marketId: mid, question: "BTC Up or Down 5m", outcomes: ["Yes", "No"], initialOutcome: "No", colors: { Yes: "#00D1FF", No: "#FF3B5C" } }); }}
                     className="flex-1 text-xs py-2 rounded-lg border-none cursor-pointer font-semibold transition-colors bg-red-500 hover:bg-red-400 text-white"
                   >
                     <RollingNumber text={`Buy Down · ₦${Math.round(no)}`} color="#FFFFFF" />
@@ -2004,6 +2004,7 @@ const price = selectedFootballMarket
           question={quickBuyOrderBook.question}
           outcomes={quickBuyOrderBook.outcomes}
           initialOutcome={quickBuyOrderBook.initialOutcome}
+          colors={quickBuyOrderBook.colors}
           onClose={() => setQuickBuyOrderBook(null)}
         />
       )}

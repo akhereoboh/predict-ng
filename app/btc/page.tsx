@@ -678,7 +678,7 @@ export default function BtcLive() {
           question="BTC Up or Down 5m"
           outcomes={["Yes", "No"]}
           initialOutcome={side === "YES" ? "Yes" : "No"}
-          colors={{ Yes: "#00D1FF", No: "#FF3B5C" }}
+          colors={{ Yes: "#2563EB", No: "#FF3B5C" }}
           onClose={() => setQuickBuyOpen(false)}
         />
       )}
